@@ -1,0 +1,135 @@
+---
+title: "Using the function scan_var_napp()"
+format: html
+editor: visual
+---
+
+# Intro
+
+Your sas, stata, or r code is a text file.
+
+Use this to check if your code uses any 'not (yet) approved' variables of your project specific master variable list.
+
+# Get the scan_var_napp() function
+
+Download or copy+paste the helper function `scan_var_napp.R` at
+
+<https://github.com/mikejacktzen/ucla-chis-puf/blob/main/scan_var_napp/scan_var_napp.R>.
+
+```{r check-function-loaded}
+
+source(paste0(getwd(),"/scan_var_napp.R"))
+args(scan_var_napp)
+
+```
+
+The input arguments and output return of the function are
+
+```{r args}
+#' @param fp_mvl a character string of the file path of the users approved '.xlsx' master variable list
+#' @param sheet a character string of the "ADULT" "CHILD" or "TEEN" tab in the MVL
+#' @param code_client a character vector whose elements are each line of the users code. Result of ?readLines()
+#' @param lgl_code_tolower a logical TRUE/FALSE whether the variable names in the user's code are lowercase or not
+#'
+#'
+#' @return a 2 column dataframe with column 'var_notapp' for the not approved variables and the associated column 'lines' for the line number(s) of the user supplied code where the variable was found
+```
+
+# Usage
+
+Adapt the below examples to your context
+
+## read in code
+
+```{r read-in-code}
+# file path to client code to inspect
+# program files .do .sas or .r are all text files with lines of code
+
+fp_code_client = paste0(getwd(),"/your_ex_stata.do")
+# fp_code_client = '/.../your_ex_stata.do'
+
+con = file(fp_code_client)
+code_client = readLines(con)
+close(con)
+
+head(code_client)
+tail(code_client)
+str(code_client)
+
+```
+
+Outside of this R sesion, your raw code file probably looks like
+
+```{r code-outside}
+writeLines(code_client)
+```
+
+## filepath to your MVL
+
+```{r filepath-4-mvl}
+
+# file path mvl with selected / approved variables
+
+fp_mvl = paste0(getwd(),"/Copy of MasterVariableList.xlsx")
+
+# toy example MVL
+# 'ADLTCNT' 'CHLDCNT' are approved with "X" in the cell
+# 'HH_SIZE' 'FAMCNT' not approved
+
+```
+
+## run the function with defaults
+
+```{r scan-adult-lower,echo=TRUE}
+
+scan_var_napp(code_client,
+              # lgl_code_tolower = TRUE,
+              fp_mvl=fp_mvl,
+              sheet="ADULT")
+
+```
+
+With the default argument `lgl_code_tolower = TRUE` , the function did not flag any variables since the example program used upper case variable names.
+
+## toggle to uppercase
+
+Switching it to `lgl_code_tolower = FALSE` we flag
+
+```{r scan-adult,echo=TRUE}
+
+scan_var_napp(code_client,
+              lgl_code_tolower = FALSE,
+              fp_mvl=fp_mvl,
+              sheet="ADULT"
+)
+
+```
+
+Here, the function flagged `HH_SIZE` in line 3, and `FAMCNT` in lines 3 and 5.
+
+`FAMCNT` was used in a regress command in line 3.\
+however,\
+`FAMCNT` was merely referenced in a comment in line 5.
+
+## teen tab of mvl
+
+```{r scan-teen,echo=TRUE}
+
+scan_var_napp(code_client,
+              lgl_code_tolower = FALSE,
+              fp_mvl=fp_mvl,
+              sheet="TEEN")
+```
+
+no teen variables were approved in this example, but the same code made reference to them
+
+## child tab of mvl
+
+```{r scan-child,echo=TRUE}
+scan_var_napp(code_client,
+              lgl_code_tolower = FALSE,
+              fp_mvl=fp_mvl,
+              sheet="CHILD")
+```
+
+no child variables were approved in this example, but the same code made reference to them
