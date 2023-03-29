@@ -1,0 +1,248 @@
+---
+title: "Make a fake variable using the CHIS Data Dictionary"
+format: docx
+---
+
+# Intro
+
+Get the rchisdd() function  
+<https://github.com/mikejacktzen/ucla-chis-puf/blob/main/rchisdd/rchisdd.R>
+
+```{r}
+source(paste0(getwd(),"/rchisdd.R"))
+args(rchisdd)
+```
+
+
+Using the rchisdd() function to create a fake random chis dummy data variable, according to user provided information from the data dictionary.  
+
+```
+#' @param info_dd a data.frame that contains c('VALUE','FREQ') if categorical or c('N','MIN','MAX','MEAN') if count/continuous
+#' @param lgl_floor TRUE/FALSE if you want the output values rounded to their integer floor
+#'
+#' @return a numeric vector of values generated according to the user supplied `info_dd`
+```
+
+This is useful when there is a variable in the dac confidential data dictionary
+
+<https://healthpolicy.ucla.edu/chis/data/confidential-data/Documents/2021/CHIS%202021%20Data%20Dictionary%20-%20Source%20-%20Adult%20Oct%202022.pdf>
+
+but you do not find it in the dummy data file you have.
+
+
+You can intentionally create an example place holder of that variable in your dummy data set with the `rchisdd()` function. After all, the dummy data set is a place holder for the real data in the dac.  
+
+The dummy variable you create will mimic the 'name' and the marginal distribution / frequency that you specify. This is information you find from the data dictionary.  
+
+Once in the dac, you can assume the variable exists in the confidential dac dataset and you do not need to create it inside the dac.
+
+
+```{r}
+library(dplyr)
+library(haven)
+
+fp_parent = getwd()
+fp_dat_dummy = paste0(fp_parent,"\\ADULT_STATA_DUMMY_2021\\Stata\\ADULT_with_format.dta")
+df_dummy = haven::read_dta(fp_dat_dummy) %>% rename_all(toupper)
+
+```
+
+Note the number of rows in the dummy dataset. Use it as the overall sample size `n_ss`
+
+```{r}
+# sample size of dataset
+nrow(df_dummy); n_ss = 24453
+```
+In the data dictionary:
+
+A categorical variable will have a Value with its respective Frequency.  
+
+A continuous variable will have the eligible universe sample size N, Min, Max, and Mean.  
+
+Below, we show you how to use the above information to create a placeholder fake variable and attach it to your dummy dataset.
+
+
+# Categorical
+
+
+We will pretend the 2021 dummy data does **NOT** have
+the categorical **INTVLANG2** (even though it does).
+
+```{r}
+df_dummy$INTVLANG2 %>% summary
+
+INTVLANG2_original = df_dummy$INTVLANG2
+
+# remove INTVLANG2
+df_dummy_pretend = df_dummy %>% select(-INTVLANG2)
+
+```
+
+
+For each data dictionary 'value', replicate that value 'freq' number of times.
+
+Store the values you see from the data dictionary into a vector called value.
+Likewise, store its paired 'frequency' into a vector called freq.
+
+```{r}
+
+info_dd = data.frame(VALUE = c(1,2,3,4,5,8),
+                     FREQ = c(22606, 1116,129,201,396,5))
+
+vec_val_freq = rchisdd(info_dd)
+
+# attach labels (if desired) not done here
+
+INTVLANG2_fake = vec_val_freq
+
+'INTVLANG2' %in% names(df_dummy_pretend)
+df_dummy_pretend$INTVLANG2 <- INTVLANG2_fake
+'INTVLANG2' %in% names(df_dummy_pretend)
+
+df_dummy_pretend$INTVLANG2 %>% table
+
+df_dummy_pretend$INTVLANG2 %>% hist
+
+```
+
+
+# Continuous
+
+For a continuous variable, our function  will squeeze/stretch a vector of values to your specified [min,max] range while approximately preserving your specified mean. It will try to solve for a power `p` that satisfies the above.
+
+
+## Continuous: Universe is entire sample
+
+We focus on the continuous variable `SRAGE` and we pretend `SRAGE` is not on the dummy data set.
+
+```{r}
+# pretend 
+SRAGE_original = df_dummy$SRAGE
+
+# remove SRAGE
+df_dummy_pretend = df_dummy %>% select(-SRAGE)
+```
+
+For `SRAGE`, all `N=24453` samples in the dummy data are eligible to take on values in the range `[18,117]` with a mean of `53.52` .
+
+Save this information from the data dictionary into a data.frame
+
+```{r}
+# continuous version
+# SRAGE
+
+# N MIN MAX MEAN from data dictionary
+info_dd = data.frame(N = 24453,
+                     MIN = 18,
+                     MAX = 117,
+                     MEAN = 53.52)
+
+vec_val_cont = rchisdd(info_dd)
+
+length(vec_val_cont)
+info_dd$N
+n_ss
+
+# note any difference between number sample size of dataset and eligible universe size
+n_ss - info_dd$N
+
+# SRAGE is applicable to all n_ss, so (n_ss - pick_params$N) == 0
+# do not need the final step to fill ddict value for the 'rest' of the (n_ss - pick_params$N) rows
+
+SRAGE_fake = vec_val_cont
+
+'SRAGE' %in% names(df_dummy_pretend)
+df_dummy_pretend$SRAGE <- SRAGE_fake
+'SRAGE' %in% names(df_dummy_pretend)
+
+df_dummy_pretend$SRAGE %>% summary
+
+hist(df_dummy_pretend$SRAGE)
+
+```
+
+## Continuous: Universe is a subset
+
+
+We focus on the continuous variable `AC210` and we pretend `AC210` is not on the dummy data set.
+
+```{r}
+# pretend 
+AC210_original = df_dummy$AC210
+
+# remove AC210
+df_dummy_pretend = df_dummy %>% select(-AC210)
+```
+
+Similar to the continuous example above, but the `UNIVERSE` information in the data dictionary should be reviewed and incorporated.
+
+Extra end-step to append negative values for ineligible / non-universe cases
+
+UNIVERSE: ADULTS WHO HAVE HAD AN ALCOHOLIC BEVERAGE IN PAST 30 DAYS
+
+That is, an individual's response in AC210 is non-negative when their response in AC208 == 1
+
+```{r}
+# AC210 N MIN MAX MEAN from data dictionary
+info_dd = data.frame(N = 14493,
+                     MIN = 0,
+                     MAX = 90,
+                     MEAN = 2.14)
+
+vec_val_cont = rchisdd(info_dd)
+
+length(vec_val_cont)
+info_dd$N
+n_ss
+
+# note any difference between number sample size of dataset and eligible universe size
+n_ss - info_dd$N
+
+
+```
+
+Notice that `info_dd$N` is 14493 which is less than the dummy data number of rows `n_ss=24453`
+
+That is the summary information of the data dictionary for AC210 applies to the 14493 eligible cases, while the remaining cases `n_ss - info_dd$N` needs to take on a value for ineligible.
+
+
+### Fill in non-Universe Values
+
+
+```{r}
+# do need the final step to fill ddict value for the 'rest' of the (n_ss - pick_params$N) non-universe rows
+
+# fake drawn values for eligible cases
+# rep -1 for the ineligible
+
+AC210_fake = c(vec_val_cont,  
+               rep(x=-1,times=(n_ss - info_dd$N))  
+               )
+
+'AC210' %in% names(df_dummy_pretend)
+df_dummy_pretend$AC210 <- AC210_fake
+'AC210' %in% names(df_dummy_pretend)
+
+df_dummy_pretend$AC210 %>% summary
+
+df_dummy_pretend %>% filter(AC210 >= 0) %>% select(AC210) %>% unlist %>% summary
+df_dummy_pretend %>% filter(AC210 < 0) %>% select(AC210) %>% unlist %>% table
+
+
+```
+
+
+# Optional Labels
+
+To add your own labels, see `haven::labelled()`
+
+<https://haven.tidyverse.org/reference/labelled.html>
+
+```{r,eval=FALSE}
+library(haven)
+?haven::labelled()
+```
+
+
+   
+
