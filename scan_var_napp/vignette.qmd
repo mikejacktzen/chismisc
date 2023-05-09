@@ -1,7 +1,8 @@
 ---
-title: "Using the function scan_var_napp()"
-format: html
-editor: visual
+title: "Using the R Function `scan_var_napp()` To Debug Your Code Before Sending It to the DAC"
+format:
+  docx:
+    toc: true
 ---
 
 # Intro
@@ -10,7 +11,54 @@ Your sas, stata, or r code is a text file.
 
 Use this to check if your code uses any 'not (yet) approved' variables of your project specific master variable list.
 
-# Get the scan_var_napp() function
+## Background
+
+This function helps you debug your code before sending it to us.
+
+This is step 6 of the DAC workflow described in the link
+
+<https://ucla.app.box.com/v/chis-dir-template/file/1163645005033>
+
+Prior to this, we assume you have followed step 2 where you have:
+
+-   2 cut-subset your dataset to only the approved variables of your MVL
+    -   Variables marked with X in /Variable List/MasterVariableList.xlsx
+    -   Save your cut data 'your_cut_data.dta_sas7bdat_sav' into the higher directory /Data/
+-   Please (re-)visit <https://healthpolicy.ucla.edu/chis/data/confidential-data/Pages/dummy.aspx>
+    -   Ctrl+f to the section "How can I Prepare the Dummy Data for Analysis?"
+    -   It has a link to download sas and stata starter scripts by clicking "Instructions and Code for Preparing Dummy Data Files".
+
+If you successfully followed step 2, then you should expect to pass this step 6 debugging check. That is, if your code does not use any not approved MVL variables, then the `scan_var_napp()` function described below will not complain (as desired).
+
+# Too Long Did Not Read Version
+
+Below is a brief example
+
+```{r ex-tldr,echo=TRUE,eval=FALSE}
+# file path to MVL with selected / approved variables
+fp_mvl = paste0(getwd(),"/Copy of MasterVariableList.xlsx")
+
+# file path to code
+fp_code_client = paste0(getwd(),"/your_ex_stata.do")
+# fp_code_client = '/.../your_ex_stata.do'
+
+con = file(fp_code_client)
+code_client = readLines(con)  # vector of text
+close(con)
+
+# pass in vector of text 'code_client' 
+# pass in file path to mvl 'fp_mvl'
+
+scan_var_napp(code_client=code_client,
+              # lgl_code_tolower = TRUE,
+              fp_mvl=fp_mvl,
+              sheet="ADULT")
+
+```
+
+# Detailed Usage
+
+## Get the scan_var_napp() function
 
 Download or copy+paste the helper function `scan_var_napp.R` at
 
@@ -34,8 +82,6 @@ The input arguments and output return of the function are
 #'
 #' @return a 2 column dataframe with column 'var_notapp' for the not approved variables and the associated column 'lines' for the line number(s) of the user supplied code where the variable was found
 ```
-
-# Usage
 
 Adapt the below examples to your context
 
@@ -80,9 +126,9 @@ fp_mvl = paste0(getwd(),"/Copy of MasterVariableList.xlsx")
 
 ## run the function with defaults
 
-```{r scan-adult-lower,echo=TRUE}
+```{r scan-adult-lower,echo=TRUE,message=FALSE}
 
-scan_var_napp(code_client,
+scan_var_napp(code_client=code_client,
               # lgl_code_tolower = TRUE,
               fp_mvl=fp_mvl,
               sheet="ADULT")
@@ -97,7 +143,7 @@ Switching it to `lgl_code_tolower = FALSE` we flag
 
 ```{r scan-adult,echo=TRUE}
 
-scan_var_napp(code_client,
+scan_var_napp(code_client=code_client,
               lgl_code_tolower = FALSE,
               fp_mvl=fp_mvl,
               sheet="ADULT"
@@ -108,14 +154,18 @@ scan_var_napp(code_client,
 Here, the function flagged `HH_SIZE` in line 3, and `FAMCNT` in lines 3 and 5.
 
 `FAMCNT` was used in a regress command in line 3.\
-however,\
+However,\
 `FAMCNT` was merely referenced in a comment in line 5.
 
-## teen tab of mvl
+Above was an example of your MVL for **ADULT** data, where the `sheet="ADULT"` was the default.
+
+## TEEN tab of MVL
+
+If you requested variables in the **TEEN** dataset, then toggle the `sheet="TEEN"` option below.
 
 ```{r scan-teen,echo=TRUE}
 
-scan_var_napp(code_client,
+scan_var_napp(code_client=code_client,
               lgl_code_tolower = FALSE,
               fp_mvl=fp_mvl,
               sheet="TEEN")
@@ -123,10 +173,12 @@ scan_var_napp(code_client,
 
 no teen variables were approved in this example, but the same code made reference to them
 
-## child tab of mvl
+## CHILD tab of MVL
+
+If you requested variables in the **CHILD** dataset, then toggle the `sheet="CHILD"` option below.
 
 ```{r scan-child,echo=TRUE}
-scan_var_napp(code_client,
+scan_var_napp(code_client=code_client,
               lgl_code_tolower = FALSE,
               fp_mvl=fp_mvl,
               sheet="CHILD")
