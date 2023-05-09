@@ -2,6 +2,7 @@
 #' rchisdd() function to create a fake variable from the info of the chis dummy data dictionary
 #'
 #' @param info_dd a data.frame that contains c('VALUE','FREQ') if categorical or c('N','MIN','MAX','MEAN') if count/continuous
+#' @param n_ss an integer for the number of rows in your data set (sample size)
 #' @param lgl_floor TRUE/FALSE if you want the output values rounded to their integer floor
 #'
 #' @return a numeric vector of values generated according to the user supplied `info_dd`
