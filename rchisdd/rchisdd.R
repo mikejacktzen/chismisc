@@ -25,7 +25,7 @@
 #' summary(fake_2)
 #' hist(fake_2)
 
-rchisdd = function(info_dd,lgl_floor=TRUE){
+rchisdd = function(info_dd,n_ss,lgl_floor=TRUE){
   
   require(dplyr)
   require(purrr)
@@ -35,6 +35,8 @@ rchisdd = function(info_dd,lgl_floor=TRUE){
   
   
   rcat = function(info_dd){
+    # for categorical, data dictionary has info of negative categories for ineligible
+    # expect user to have that in info_dd
     
     lst_value_freq = info_dd %>% 
       rename(x=VALUE,times=FREQ) %>% 
@@ -47,7 +49,10 @@ rchisdd = function(info_dd,lgl_floor=TRUE){
     return(vec_val_freq)
   }
   
-  rcont_mmm = function(info_dd,lgl_floor){
+  rcont_mmm = function(info_dd,n_ss,lgl_floor){
+    # for continuous, data dictionary does NOT have info of negative categories for ineligible
+    # use n_ss to backsolve and fill in -1
+    # n_ss - info_dd$N
     
     # the main workhorse helper function to stretch/squeeze
     scaleMMM <- function(x, 
@@ -95,20 +100,32 @@ rchisdd = function(info_dd,lgl_floor=TRUE){
     # hist(draw1)
     # plot(draw0,draw1)
     
+
+    
     if(isTRUE(lgl_floor)){
       # optional integers round floor()
       message("Rounding to the floor since lgl_floor=TRUE")
+      
+      draw1 = c(floor(draw1),  # round
+                rep(x=-1,times=(n_ss - info_dd$N))  # do not round
+                )
+      
       return(floor(draw1))
     }else{
+      # n_ss
+      draw1 = c(draw1,rep(x=-1,times=(n_ss - info_dd$N)))
       return(draw1)
     }
   }
   
   if(isTRUE(lgl_cnt)){
     # continuous
-    out_draw = rcont_mmm(info_dd,lgl_floor)
+    message(paste0('returning continuous draws with ',(n_ss - info_dd$N),' "-1" categories'))
+    out_draw = rcont_mmm(info_dd,n_ss,lgl_floor)
   }else{
     # categorical
+    message(paste0('returning categorical draws'))
+    
     out_draw = rcat(info_dd)
   }
   
