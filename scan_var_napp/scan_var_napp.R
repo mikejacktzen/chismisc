@@ -72,7 +72,7 @@ scan_var_napp <- function(fp_mvl,
                           sheet="ADULT",
                           code_client,
                           lgl_code_tolower=TRUE
-                          ) {
+) {
   
   require(readxl)
   require(dplyr)
@@ -89,12 +89,15 @@ scan_var_napp <- function(fp_mvl,
                           sheet=sheet)
   
   # var approved marked with "X"
-  df_app = mvl[-1,] %>% 
+  df_app = mvl %>% 
+    # mvl[-1,] %>% 
+    filter(!grepl(`VARIABLE NAME`,pattern="SECTION [A-Z]+")) %>% 
+    
     select(`VARIABLE NAME`,starts_with("CHIS ")) %>% 
-    select(where(~!all(is.na(.x)))) %>% 
+    # select(where(~!all(is.na(.x)))) %>% 
     filter(if_any(.cols=everything(),
                   .fns = ~ grepl(x=.x,
-                                 pattern="^X$")))
+                                 pattern="^[xX]$")))
   
   # var not approved == everything else
   vars_notapp = setdiff(mvl[-1,]$`VARIABLE NAME`,
@@ -122,8 +125,11 @@ scan_var_napp <- function(fp_mvl,
                            # grep(pattern=paste0("\\b",var1,"\\b"),
                            #      x=code_client)
                            
+                           # 'instype' %in% vars_notapp
+                           # var1 = "instype"
                            ind_linecode = grep(pattern=paste0(var1),
                                                x=code_client)
+                           
                            return(paste0(ind_linecode,collapse=','))
                          })
   
@@ -137,6 +143,6 @@ scan_var_napp <- function(fp_mvl,
                             lines=unlist(lst_vna_lines_only),
                             row.names = NULL)
   return(df_vna_lines)
-
+  
 }
 
