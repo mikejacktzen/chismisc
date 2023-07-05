@@ -1,8 +1,7 @@
 ---
 title: "Using the R Function `scan_var_napp()` To Debug Your Code Before Sending It to the DAC"
 format:
-  docx:
-    toc: true
+  docx
 ---
 
 # Intro
@@ -27,6 +26,8 @@ Prior to this, we assume you have followed step 2 where you have:
 -   Please (re-)visit <https://healthpolicy.ucla.edu/chis/data/confidential-data/Pages/dummy.aspx>
     -   Ctrl+f to the section "How can I Prepare the Dummy Data for Analysis?"
     -   It has a link to download sas and stata starter scripts by clicking "Instructions and Code for Preparing Dummy Data Files".
+
+More Details of Step 2 "Dummy Data Prep Instructions" are in the Appendix.  
 
 If you successfully followed step 2, then you should expect to pass this step 6 debugging check. That is, if your code does not use any not approved MVL variables, then the `scan_var_napp()` function described below will not complain (as desired).
 
@@ -62,7 +63,7 @@ scan_var_napp(code_client=code_client,
 
 Download or copy+paste the helper function `scan_var_napp.R` at
 
-<https://github.com/mikejacktzen/ucla-chis-puf/blob/main/scan_var_napp/scan_var_napp.R>.
+<https://github.com/mikejacktzen/chismisc/blob/main/scan_var_napp/scan_var_napp.R>.
 
 ```{r check-function-loaded}
 
@@ -185,3 +186,46 @@ scan_var_napp(code_client=code_client,
 ```
 
 no child variables were approved in this example, but the same code made reference to them
+
+# Appendix
+
+## Dummy Data Prep Instructions
+
+Below are the "Dummy Data Prep Instructions" (Step 2), which you can obtain from the links below. As mentioned in the Background Section, prior to this, we assume you have followed step 2 where you have:
+
+-   2 cut-subset your dataset to only the approved variables of your MVL
+    -   Variables marked with X in /Variable List/MasterVariableList.xlsx
+    -   Save your cut data 'your_cut_data.dta_sas7bdat_sav' into the higher directory /Data/
+-   Please (re-)visit <https://healthpolicy.ucla.edu/chis/data/confidential-data/Pages/dummy.aspx>
+    -   Ctrl+f to the section "How can I Prepare the Dummy Data for Analysis?"
+    -   It has a link to download sas and stata starter scripts by clicking "Instructions and Code for Preparing Dummy Data Files".
+    
+    
+### How can I Prepare the Dummy Data for Analysis?
+
+Dummy data code can be used by researchers to analyze dummy data that contain approved CHIS variables from the Master Variable List. Researchers can run this code to remove variables that are not approved for use in DAC projects before writing code for dummy data and submitting DAC data requests. The researchers can simply change the file paths and run the code after downloading dummy data files. This code is available in SAS and Stata formats.
+
+<https://healthpolicy.ucla.edu/chis/data/confidential-data/Documents/Dummy_Data_Prep.zip>
+
+### Code to Prepare Dummy Data for Analysis
+This code is meant for researchers to utilize dummy data with variables available to them, as indicated by corresponding selected CHIS variables in the master variable list. Researchers can run this code to remove variables not currently available to them before writing code for dummy data and submitting DAC requests. The researchers can simply change the file paths and run the code after downloading dummy data from the CHPR website. This code is available in SAS and Stata formats.
+
+### Steps for SAS
+1.	Change datafile location to the file path where you have saved dummy data (either single year or pooled years of data)
+2.	Change file path for MVL Excel table
+3.	Change dataset name from “Combined” to the dummy dataset name that you have saved in your directory. (Also remove the “Year” variable from the “Keep=” option if you are using single year data and do not have a year variable.)
+4.	Change file path to output final dataset that is ready for analysis, either in SAS (.sas7bdat) or Stata (.dta)
+5.	Remove lines of code if needed—if you do not want to condense a combined adult, teen, and child dummy data set, remove the line for the age group that is not part of the dummy data set you are condensing.
+    a.	i.e. if you only you are analyzing the adult data set separately, keep %xlimp(ADULT); and remove %xlimp(TEEN); and %xlimp(CHILD); 
+This will import only the “Adult” sheet from the MVL Excel table
+6.	Remove data sets that were not imported in the previous step from the data step.
+
+### Steps for Stata
+1.	Change file path to folder containing dummy datasets (either individual years or, if working with multiple years, already-combined dummy data).
+2.	Change file path to import Master Variable List (MVL) with approved variables selected for each age group.
+3.	Change file path to dummy data file. 
+    a.	Remove “year” in keep statement if working with individual years, or if “year” variable was not created upon merging data  
+
+NOTE: After preparing code that runs successfully with dummy data, please ensure that all variables are changed from PUF to CHIS variable names. Please refer to “PUF RECODES” tab in MVL to ensure the variable names are changed from those in the “VARIABLE NAME” column (indicating PUF variable names) to the corresponding names in the “ORIGINAL” column (indicating CHIS variable names).
+
+
