@@ -4,31 +4,46 @@
 library(tidyverse)
 library(purrr)
 
-directory_dummyfiles_unzipped = "..\\data-chis-dummy\\unzipped"
+filepath_dummyfiles_unzipped = "..\\data-chis-dummy\\unzipped\\"
 
 filepath_mvl="..\\MasterVariableList.xlsx"
 
-file_path_save = "..\\data-chis-dummy\\mvl-approved\\"
+filepath_save = "..\\data-chis-dummy\\mvl-approved\\"
 
 
 
 read_dta_add_filename <- function(filename){
-  # filename=files_dta[[21]]
+  require(dplyr)
+  require(stringr)
+  require(haven)
+  
+  # files_dta = filepath_dummyfiles_unzipped %>%
+  #   list.files(path = .,full.names = T,recursive = TRUE) %>%
+  #   purrr::keep(str_detect(string=.,pattern="format"))
+  # filename=files_dta[[16]]
+  
+  atc_file_0 = as.character(str_match(toupper(filename),"ADULT|TEEN|CHILD"))
+  
+  # manually dling files some older zip files named the same
+  # leaves (1) artifact, so use [0-9]{2,} to get 2+ YYYY digits
+  
+  year_file_0 = as.character(str_match(filename,'[0-9]{2,}'))
+  
   dat = haven::read_dta(filename)
   
-  dat = dat %>% 
+  dat2 = dat %>% 
     mutate(filename = filename) %>% 
+    mutate(atc_file=atc_file_0) %>% 
     
-    # manually dling files some older zip files named the same
-    # leaves (1) artifact, so use [0-9]{2,} to get 2 digits
-    
-    mutate(year_file=str_match(filename,'[0-9]{2,}')) %>% 
-    mutate(atc_file=str_match(toupper(filename),"ADULT|TEEN|CHILD")) %>% 
+    # some files only have last 2 YY digits missing the prefix 20
+    mutate(year_file=ifelse(nchar(year_file_0)==2,
+                            paste0("20",year_file_0),
+                            year_file_0)) %>%
     rename_with(toupper)
   
-  # dat %>% select(FILENAME,YEAR_FILE,ATC_FILE)
+  # dat2 %>% select(FILENAME,YEAR_FILE,ATC_FILE)
   
-  return(dat)
+  return(dat2)
 }
 
 
@@ -40,17 +55,16 @@ read_dta_add_filename <- function(filename){
 keep_approved_vars = function(filepath_mvl,
                               df_dta,
                               toupper=TRUE,
-                              file_path_save){
+                              filepath_save){
   
+  require(dplyr)
+  require(readxl)
+  require(haven)
   
   # df_dta = list_dta[[1]]
   sheet = df_dta %>% distinct(ATC_FILE) %>% unlist
   
   year_file = unlist(df_dta[1,'YEAR_FILE'],use.names = F)
-  if(nchar(year_file)==2){
-    # front pad '20' for edge case years with only '15'
-    year_file = paste0("20",year_file)
-  }
   
   mvl = readxl::read_xlsx(filepath_mvl,
                           sheet=sheet)
@@ -75,7 +89,7 @@ keep_approved_vars = function(filepath_mvl,
   df_dta_cut = df_dta %>% select(contains(df_app[["VARIABLE NAME"]]))
   # data will not have our explicitly created FILENAME,YEAR_FILE,ATC_FILE
   
-  haven::write_dta(df_dta_cut,paste0(file_path_save,sheet,"_",year_file,".dta"))
+  haven::write_dta(df_dta_cut,paste0(filepath_save,sheet,"_",year_file,".dta"))
   
 }
 
@@ -83,11 +97,11 @@ keep_approved_vars = function(filepath_mvl,
 
 # pipe together statements ------------------------------------------------
 
-# unzipped files in 'directory_dummyfiles_unzipped'
+# unzipped files in 'filepath_dummyfiles_unzipped'
 # get opened and cut according to your 'filepath_mvl'
-# saved in 'file_path_save'
+# saved in 'filepath_save'
 
-directory_dummyfiles_unzipped %>% 
+filepath_dummyfiles_unzipped %>% 
   
   list.files(path = .,full.names = T,recursive = TRUE) %>% 
   purrr::keep(str_detect(string=.,pattern="format")) %>% 
@@ -96,8 +110,8 @@ directory_dummyfiles_unzipped %>%
   
   purrr::walk(keep_approved_vars,
               filepath_mvl=filepath_mvl,
-              file_path_save=file_path_save)
+              filepath_save=filepath_save)
 
-message(file_path_save)
+message(filepath_save)
 
 
