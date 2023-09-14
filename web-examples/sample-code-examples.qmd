@@ -1,0 +1,1081 @@
+---
+title: "Sample Code Examples"
+format: 
+  html:
+    code-block-border-left: true
+    highlight-style: github
+    toc: true
+    toc-expand: true
+---
+
+# Sample Code to Analyze CHIS Data 
+
+This page provides links to sample code for appropriately analyzing California Health Interview Survey (CHIS) data in several statistical software packages using the replicate weights method or the Taylor series linearization method. For a summary of how weighting and variance estimation work in analyzing CHIS Data, refer to Weighting and Variance Estimation.
+
+
+CHIS employs a complex sample design and requires proper weighting and variance (or its square root – standard error) calculation of the estimates. Most statistical software packages calculate variance assuming that the data are from a simple random sample; this underestimates the variance of estimates produced from CHIS data.  
+
+In order to accurately estimate variance in analyses of CHIS data, either replicate weights or the Taylor series linearization method may be used. This document describes the use of the Taylor series linearization method; for more information on replicate weights, see “Methodology Brief—Weighting and Estimation of Variance in the CHIS Public Use Files”. The required variables for Taylor series linearization method (tsvarstr and tsvrunit) have not been included in the CHIS Public Use Files. 
+
+In comparison with replicate weights, the Taylor series linearization method requires much less computing time, but requires more attention on specifying the sampling design and on appropriate handling of subpopulation analyses. The variable that accounts for sample stratification is tsvarstr. When any of the adult, adolescent, or child data files are concatenated, each household becomes like a cluster; therefore, the clustering unit variable tsvrunit should be included, but should not be included if the data files are analyzed independently of each other. If the data needs to be subset, it should be done prior to the analysis in a separate step, with the remainder of the population set to missing. 
+
+The final weight (rakedw0) accounts for the sample selection probabilities and statistical adjustments for potential undercoverage and nonresponse biases. In addition, when this weight is applied, it ensures that estimates from the CHIS sample are an unbiased representation of the California population. Using only rakedw0 without sample design information in analyzing CHIS data will produce unbiased estimates, but would underestimate the variability due to the incorrect assumption that the sample was drawn with simple random sampling.
+
+
+Below are sample codes.
+
+Replicate Weighting examples are available for:  
+  Stata, R, SAS, SUDAAN. 
+
+Taylor Series examples are available for:  
+  Stata, R, SAS, SUDAAN, SPSS.
+
+
+
+## Replicate Weights
+
+### Stata
+
+#### Mean Calculation 
+In the following sample code, the distribution of BMI (bmi_p) is examined by race (racehpr2) and by race and sex (racehpr2*srsex).    
+
+```default
+*Sample design specification step* 
+use "DATASET LOCATION” 
+svyset [pw=rakedw0], jkrw(rakedw1-rakedw80, multiplier(1)) vce(jack) mse 
+  
+*Analysis* 
+svy: mean bmi_p, over(racehpr2) 
+svy: mean bmi_p, over(srsex racehpr2) 
+
+```
+In Stata, the sample design specification step should be included before conducting any analysis. 
+
+
+#### Frequency Calculation 
+In the following sample code, the percentage of people who currently have asthma (astcur) is examined by race (racehpr2) and by race and sex (racehpr2*srsex). 
+
+```default
+*Sample design specification step* 
+use "DATASET LOCATION” 
+svyset [pw=rakedw0], jkrw(rakedw1-rakedw80, multiplier(1)) vce(jack) mse 
+ 
+*Analysis* 
+svy: tabulate astcur racehpr2, col se ci  
+svy, subpop (if srsex==1): tab astcur racehpr2, col se ci 
+svy, subpop (if srsex==2): tab astcur racehpr2, col se ci 
+
+```
+In Stata, the sample design specification step should be included before conducting any analysis.
+
+Stata V.10 and higher cannot accommodate 3 or more variables in the tab command. 
+
+#### Linear Regression 
+In the following sample code, Body Mass Index (bmi_p) is examined in relation to race (racehpr2), sex (srsex), and age 
+(srage_p) while controlling for each other. Note that racehpr2 and srsex are categorical variables; White (racehpr2=6) and Male (srsex=1) are used as their reference categories. 
+
+```default
+*Sample design specification step* 
+use "DATASET LOCATION” 
+svyset [pw=rakedw0], jkrw(rakedw1-rakedw80, multiplier(1)) vce(jack) mse 
+ 
+*Analysis*  
+recode racehpr2 (6=1) (1=2) (2=3) (3=4) (4=5) (5=6) (7=7), gen(race) 
+  
+xi: svy: regress bmi_p i.srsex i.race srage_p 
+
+```
+
+In Stata, the sample design specification step should be included before conducting any analysis.
+
+Recoding is done in order to choose “White” (racehpr2=6) as the reference group.
+
+
+#### Logistic Regression 
+In the following sample code, current asthma status (astcur) is examined, controlling for race (racehpr2), sex (srsex), and age (srage_p). SUDAAN and Stata require the dependent variables to be coded as 0 and 1 for logistic regression, so a new dependent variable ast is created and assigned 1 where astcur=1 (“Current asthma”) and 0 where astcur=2 (“No current asthma”). The category “No current asthma” is used as the reference in the analysis. 
+
+```default
+*Sample design specification step* 
+use "DATASET LOCATION” 
+svyset [pw=rakedw0], jkrw(rakedw1-rakedw80, multiplier(1)) vce(jack) mse 
+ 
+*Analysis*  
+recode astcur (2=0) (1=1) (-9=.), gen (ast) 
+  
+xi: svy: logit ast srage_p i.race i.srsex 
+
+xi: svy: logistic ast srage_p i.race i.srsex 
+```
+
+In Stata, the sample design specification step should be included before conducting any analysis.
+
+`logit` produces parameter estimates.
+
+`logistic` produces odds ratios. Stata automatically chooses the lowest value of the categorical variable as the reference group for the independent and dependent variables.   
+
+
+### R
+
+
+#### Mean Calculation 
+In the following sample code, the distribution of BMI (bmi_p) is examined by race (racehpr2) and by race and sex (racehpr2*srsex).    
+
+```default
+# Sample design specification step
+
+# Developed with 'R version 4.2.3' and 'survey version 4.1-1'
+library(survey)
+
+chis_design <- svrepdesign(data = data , weights = ~ rakedw0 , 
+                           repweights = "rakedw[1-80]" , 
+                           type = "other" , scale = 1 ,
+                           rscales = 1 , mse = TRUE)
+# Analysis
+
+chis_design |> 
+  svyby( formula = ~ bmi_p , by = ~ racehpr2,
+         FUN=svymean, vartype=c(“se”,”ci”), deff = TRUE)
+
+chis_design |> 
+  svyby( formula = ~ bmi_p , by = ~ racehpr2+srsex,
+         FUN=svymean, vartype=c(“se”,”ci”), deff = TRUE)
+
+```
+
+
+#### Frequency Calculation 
+In the following sample code, the percentage of people who currently have asthma (astcur) is examined by race (racehpr2) and by race and sex (racehpr2*srsex). 
+
+```default
+# Sample design specification step
+
+# Developed with 'R version 4.2.3' and 'survey version 4.1-1'
+library(survey)
+
+chis_design <- svrepdesign(data = data , weights = ~ rakedw0 , 
+                           repweights = "rakedw[1-80]" , 
+                           type = "other" , scale = 1 ,
+                           rscales = 1 , mse = TRUE)
+# Analysis
+
+# sub pop 1
+chis_design |> subset(srsex=="1") |> 
+  svytable(formula=~astcur+racehpr2) |>
+  prop.table()  # proportions
+
+chis_design |> subset(srsex=="1") |> 
+  svytable(formula=~astcur+ racehpr2) |>
+  # prop.table() |> 
+  summary()  # totals with chi-square stats
+
+# sub pop 2
+chis_design |> subset(srsex=="2") |> 
+  svytotal(x=~interaction(astcur, racehpr2))  # total as interaction
+
+chis_design |> subset(srsex=="2") |> 
+  svymean(x=~interaction(astcur, racehpr2)) |>
+  confint()  # confidence intervals
+
+```
+
+#### Linear Regression 
+In the following sample code, Body Mass Index (bmi_p) is examined in relation to race (racehpr2), sex (srsex), and age 
+(srage_p) while controlling for each other. Note that racehpr2 and srsex are categorical variables; White (racehpr2=6) and Male (srsex=1) are used as their reference categories. 
+
+```default
+# Sample design specification step
+
+# Developed with 'R version 4.2.3' and 'survey version 4.1-1'
+library(survey)
+
+chis_design <- svrepdesign(data = data , weights = ~ rakedw0 , 
+                           repweights = "rakedw[1-80]" , 
+                           type = "other" , scale = 1 ,
+                           rscales = 1 , mse = TRUE)
+# Analysis
+
+# use relevel(ref=,...) inside the formula to pick reference category
+# can alternatively pre process data before the formula call
+
+chis_design |> 
+  svyglm(formula = bmi_p ~ relevel(as.factor(srsex),ref="2") + 
+           relevel(as.factor(racehpr2),ref="6") + 
+           srage_p,
+         family=stats::gaussian(),
+         rescale=TRUE) |> 
+         summary()
+
+
+```
+
+#### Logistic Regression 
+In the following sample code, current asthma status (astcur) is examined, controlling for race (racehpr2), sex (srsex), and age (srage_p). SUDAAN and Stata require the dependent variables to be coded as 0 and 1 for logistic regression, so a new dependent variable ast is created and assigned 1 where astcur=1 (“Current asthma”) and 0 where astcur=2 (“No current asthma”). The category “No current asthma” is used as the reference in the analysis. 
+
+```default
+# Sample design specification step
+
+# Developed with 'R version 4.2.3' and 'survey version 4.1-1'
+library(survey)
+
+chis_design <- svrepdesign(data = data , weights = ~ rakedw0 , 
+                           repweights = "rakedw[1-80]" , 
+                           type = "other" , scale = 1 ,
+                           rscales = 1 , mse = TRUE)
+
+# Analysis
+
+# use stats::update() to transform ASTCUR after the survey design spec
+# can alternatively pre process data before the survey design spec
+
+# use relevel(ref=,...) inside the formula to pick reference category
+# can alternatively pre process data before the formula call
+
+chis_design |> 
+  stats::update(ast = ifelse(astcur==2,0,1)) |>
+  svyglm(formula = ast ~ srage_p + 
+           relevel(as.factor(racehpr2),ref="6") + 
+           relevel(as.factor(srsex),ref="2"),
+         family=quasibinomial(),
+         rescale=TRUE)
+
+
+```
+
+### SAS
+
+#### Mean Calculation 
+In the following sample code, the distribution of BMI (bmi_p) is examined by race (racehpr2) and by race and sex (racehpr2*srsex).    
+
+```default
+SAS:   
+PROC SORT DATA = data; 
+BY racehpr2; 
+RUN; 
+ 
+PROC SURVEYMEANS DATA = data VARMETHOD=JACKKNIFE; 
+WEIGHT rakedw0; 
+REPWEIGHT rakedw1-rakedw80/JKCOEFS=1; 
+VAR bmi_p; 
+BY racehpr2; RUN; 
+ 
+PROC SORT DATA = data; 
+BY racehpr2 srsex; 
+RUN; 
+  
+PROC SURVEYMEANS DATA = data VARMETHOD=JACKKNIFE; 
+WEIGHT rakedw0; 
+REPWEIGHT rakedw1-rakedw80/JKCOEFS=1; 
+VAR bmi_p; 
+BY racehpr2 srsex; 
+RUN; 
+
+```
+
+Jackknife coefficients are necessary for accurate variance calculations, and jackknife coefficients of 1 in SAS will produce equal variance calculations as those produced in SUDAAN. However, for SAS V.9.2(TS1M0) and earlier, a value of 1 will not be accepted; as a substitute, 0.9999 can be entered. Without this specification, the default value of the jackknife coefficients will be [(# replicate weights ‐ 1)/# replicate weights]; for CHIS, this would be [(80 ‐ 1)/80] = 0.9875.
+
+This produces racehpr2*srsex grouping.  
+
+#### Frequency Calculation 
+
+In the following sample code, the percentage of people who currently have asthma (astcur) is examined by race (racehpr2) and by race and sex (racehpr2*srsex). 
+
+
+```default
+PROC SORT DATA = data; 
+BY racehpr2; 
+RUN; 
+
+PROC SURVEYMEANS DATA = data VARMETHOD=JACKKNIFE; 
+WEIGHT rakedw0; 
+REPWEIGHT rakedw1-rakedw80/JKCOEFS=1; 
+VAR astcur; 
+CLASS astcur; 
+BY racehpr2;  
+RUN; 
+ 
+PROC SORT DATA = data; 
+BY racehpr2 srsex; 
+RUN;   
+
+PROC SURVEYMEANS DATA = data VARMETHOD=JACKKNIFE; 
+WEIGHT rakedw0; 
+REPWEIGHT rakedw1-rakedw80/JKCOEFS=1; 
+VAR astcur; 
+CLASS astcur; BY racehpr2 srsex; 
+RUN;   
+```
+
+Alternatively, PROC SURVEYFREQ may be useful especially for variables with more than two categories. One caveat in creating multiple tables in one PROC SURVEYFREQ procedure is that the procedure takes the smallest applicable sample sizes among all variables. Therefore, creating one table per one PROC SURVEYFREQ procedure is recommended: 
+
+```default
+PROC SURVEYFREQ DATA = data VARMETHOD=JACKKNIFE; 
+WEIGHT rakedw0; 
+REPWEIGHT rakedw1-rakedw80/JKCOEFS=1; 
+TABLES racehpr2*astcur/row; 
+RUN; 
+
+PROC SURVEYFREQ DATA = data VARMETHOD=JACKKNIFE; 
+WEIGHT rakedw0; 
+REPWEIGHT rakedw1-rakedw80/JKCOEFS=1; 
+TABLES srsex*racehpr2*astcur/row; 
+RUN; 
+
+```
+
+Jackknife coefficients are necessary for accurate variance calculations, and jackknife coefficients of 1 in SAS will produce equal variance calculations as those produced in SUDAAN. However, for SAS V.9.2(TS1M0) and earlier, a value of 1 will not be accepted; as a substitute, 0.9999 can be entered. Without this specification, the default value of the jackknife coefficients will be [(# replicate weights ‐ 1)/# replicate weights]; for CHIS, this would be [(80 ‐ 1)/80] = 0.9875. 
+if data year >= 2019, then JKCOEFFS = 0.5.
+
+This produces racehpr2*srsex grouping.  
+ 
+
+#### Linear Regression 
+
+In the following sample code, Body Mass Index (bmi_p) is examined in relation to race (racehpr2), sex (srsex), and age 
+(srage_p) while controlling for each other. Note that racehpr2 and srsex are categorical variables; White (racehpr2=6) and Male (srsex=1) are used as their reference categories. 
+
+```default
+PROC SURVEYREG DATA = data VARMETHOD=JACKKNIFE; 
+WEIGHT rakedw0; 
+REPWEIGHT rakedw1-rakedw80/JKCOEFS=1; 
+FORMAT racehpr2 racehprf. srsex srsex.; 
+CLASS racehpr2 srsex; 
+MODEL bmi_p = srsex racehpr2 srage_p/SOLUTION;
+RUN; 
+
+```
+Jackknife coefficients are necessary for accurate variance calculations, and jackknife coefficients of 1 in SAS will produce equal variance calculations as those produced in SUDAAN. However, for SAS V.9.2(TS1M0) and earlier, a value of 1 will not be accepted; as a substitute, 0.9999 can be entered. Without this specification, the default value of the jackknife coefficients will be [(# replicate weights ‐ 1)/# replicate weights]; for CHIS, this would be [(80 ‐ 1)/80] = 0.9875
+
+When the values are formatted either in the data step or in the procedure, SAS automatically picks the category of the categorical variables whose label is alphabetically last as a reference group.
+
+SOLUTION option provides the parameter estimates when using a CLASS statement. 
+
+#### Logistic Regression 
+
+In the following sample code, current asthma status (astcur) is examined, controlling for race (racehpr2), sex (srsex), and age (srage_p). SUDAAN and Stata require the dependent variables to be coded as 0 and 1 for logistic regression, so a new dependent variable ast is created and assigned 1 where astcur=1 (“Current asthma”) and 0 where astcur=2 (“No current asthma”). The category “No current asthma” is used as the reference in the analysis. 
+
+```default
+PROC SURVEYLOGISTIC DATA = data VARMETHOD=JACKKNIFE;
+FORMAT astcur astcurf. racehpr2 racehprf. srsex srsex.;
+WEIGHT rakedw0; 
+REPWEIGHT rakedw1-rakedw80/JKCOEFS=1; 
+CLASS astcur (REF=“NO CURRENT ASTHMA”) racehpr2 (REF=“WHITE”) srsex (REF=“MALE”)/PARAM=REF; 
+MODEL astcur = racehpr2 srsex srage_p; 
+RUN; 
+
+```
+ 
+When the values are formatted either in the data step or in the procedure, SAS automatically picks the category of the   	categorical variables whose label is in the last alphabetical order as a reference group.  In PROC SURVEYLOGISTIC, the   	reference category of the independent and dependent variables may be specified in a CLASS statement.
+
+Jackknife coefficients are necessary for accurate variance calculations, and jackknife coefficients of 1 in SAS will produce equal variance calculations as those produced in SUDAAN. However, for SAS V.9.2 (TS1M0) and earlier, a value of 1 will not be accepted; as a substitute, 0.9999 can be entered. Without this specification, the default value of the jackknife coefficients will be [(# replicate weights ‐ 1)/# replicate weights]; for CHIS, this would be [(80 ‐ 1)/80] = 0.9875.
+
+PARAM=REF is specified to ensure dummy coding of the categorical independent variables. 
+
+
+
+### SUDAAN
+
+#### Mean Calculation 
+In the following sample code, the distribution of BMI (bmi_p) is examined by race (racehpr2) and by race and sex (racehpr2*srsex).    
+
+```default
+
+PROC DESCRIPT DATA = data FILETYPE=SAS DESIGN=JACKKNIFE; 
+WEIGHT rakedw0; 
+JACKWGTS rakedw1-rakedw80/ADJJACK=1;
+VAR bmi_p; 
+TABLES racehpr2 racehpr2*srsex; 
+SUBGROUP racehpr2 srsex; 
+LEVELS 7 2; 
+RUN; 
+
+```
+
+#### Frequency Calculation 
+In the following sample code, the percentage of people who currently have asthma (astcur) is examined by race (racehpr2) and by race and sex (racehpr2*srsex). 
+
+```default
+PROC CROSSTAB DATA = data FILETYPE=SAS DESIGN=JACKKNIFE; 
+WEIGHT rakedw0; 
+JACKWGTS rakedw1-rakedw80/ADJJACK=1; 
+TABLES racehpr2*astcur srsex*racehpr2*astcur; 
+SUBGROUP astcur racehpr2 srsex; 
+LEVELS 2 7 2; 
+RUN; 
+
+```
+
+#### Linear Regression 
+In the following sample code, Body Mass Index (bmi_p) is examined in relation to race (racehpr2), sex (srsex), and age 
+(srage_p) while controlling for each other. Note that racehpr2 and srsex are categorical variables; White (racehpr2=6) and Male (srsex=1) are used as their reference categories. 
+
+```default
+PROC REGRESS DATA = data FILETYPE=SAS DESIGN=JACKKNIFE; 
+WEIGHT rakedw0; 
+JACKWGTS rakedw1-rakedw80/ADJJACK=1; 
+SUBGROUP racehpr2 srsex; 
+LEVELS 7 2; 
+REFLEVEL racehpr2=6 srsex=1; 
+MODEL bmi_p = racehpr2 srsex srage_p; 
+RUN; 
+
+```
+
+
+#### Logistic Regression 
+In the following sample code, current asthma status (astcur) is examined, controlling for race (racehpr2), sex (srsex), and age (srage_p). SUDAAN and Stata require the dependent variables to be coded as 0 and 1 for logistic regression, so a new dependent variable ast is created and assigned 1 where astcur=1 (“Current asthma”) and 0 where astcur=2 (“No current asthma”). The category “No current asthma” is used as the reference in the analysis. 
+
+```default
+DATA newdata; 
+SET data; 
+IF astcur=1 THEN ast=1; 
+ELSE IF astcur=2 THEN ast=0; 
+RUN;   
+
+PROC RLOGIST data = newdata FILETYPE=SAS DESIGN=JACKKNIFE; 
+WEIGHT rakedw0; 
+JACKWGTS rakedw1-rakedw80/ADJJACK=1; 
+SUBGROUP racehpr2 srsex; 
+LEVELS 7 2; 
+REFLEVEL racehpr2 = 6 srsex = 1; 
+MODEL ast = racehpr2 srsex srage_p; RUN; 
+
+```
+
+
+
+## Taylor Series
+
+Sample Codes for Variance Estimation Using the Taylor Series Linearization Method 
+
+This document contains information on using the Taylor series linearization method to accurately calculate variance with the California Health Interview Survey (CHIS) data and also contains sample codes for generating means, frequencies, and for performing linear regressions and logistic regressions. 
+
+
+
+
+
+
+
+### Stata
+
+#### Mean Calculation 
+In the following sample code, the distribution of BMI (bmi) is examined by race (racehpr2) and by the interaction between race and sex (racehpr2*srsex).    
+
+
+```default
+*Sample design specification step*
+use "DATASET LOCATION” 
+svyset TSVRUNIT [pw=rakedw0], strata (TSVARSTR)
+  
+*Analysis* 
+svy: mean bmi, over(racehpr2) 
+svy: mean bmi, over(srsex racehpr2) 
+
+```
+
+In Stata, the sample design specification step should be included before conducting any analysis.
+ 
+When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit. 
+
+#### Frequency Calculation 
+In the following sample code, the percentage of people who currently have asthma (astcur) is examined by race (racehpr2) and by race and sex (racehpr2*srsex). 
+
+```default
+*Sample design specification step*
+use "DATASET LOCATION” 
+svyset TSVRUNIT [pw=rakedw0], strata (TSVARSTR)
+ 
+*Analysis*
+svy: tabulate astcur racehpr2, col se ci  
+svy, subpop (if srsex==1): tab astcur racehpr2, col se ci 
+svy, subpop (if srsex==2): tab astcur racehpr2, col se ci 
+
+```
+
+In Stata, the sample design specification step should be included before conducting any analysis.
+
+When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit.
+
+Stata V.10 and higher cannot accommodate 3 or more variables in the tab command. 
+
+#### Linear Regression 
+In the following sample code, Body Mass Index (bmi) is examined in relation to race (racehpr2), sex (srsex), and age (srage) while controlling for each other. Note that racehpr2 and srsex are categorical variables, and White (racehpr2=6) and Male 
+(srsex=1) are used as their reference categories. 
+
+```default
+*Sample design specification step*
+use "DATASET LOCATION” 
+svyset TSVRUNIT [pw=rakedw0], strata (TSVARSTR)
+ 
+*Analysis*   
+recode racehpr2 (6=1) (1=2) (2=3) (3=4) (4=5) (5=6) (7=7), gen(race)
+ 
+xi: svy: regress bmi i.srsex i.race srage 
+
+```
+
+In Stata, the sample design specification step should be included before conducting any analysis.
+
+When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit.
+
+Reordering is done in order to choose “White” (racehpr2=6) as the reference group. 
+
+
+#### Logistic Regression 
+In the following sample code, current asthma status (astcur) is examined, controlling for race (racehpr2), sex (srsex), and age (srage). As SUDAAN and Stata require the dependent variables coded as 0 and 1 for logistic regression, a new dependent variable ast is created and assigned 1 where astcur=1 (“Current asthma”) and 0 where astcur=2 (“No current asthma”). The category “No current asthma” is used as the reference in the analysis. 
+
+```default
+*Sample design specification step*
+use "DATASET LOCATION” 
+svyset TSVRUNIT [pw=rakedw0], strata (TSVARSTR)
+ 
+*Analysis*  
+recode astcur (2=0) (1=1) (-9=.), gen (ast) 
+  
+xi: svy: logit ast srage i.race i.srsex 
+
+xi: svy: logistic ast srage i.race i.srsex
+
+```
+
+In Stata, the sample design specification step should be included before conducting any analysis.
+
+When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit.
+
+`logit` produces parameter estimates.
+
+`logistic`  produces odds ratios. Stata automatically chooses the lowest value of the categorical variable as the reference group for the independent and dependent variables. 
+
+
+### R
+
+The Taylor Series estimation examples in `R` using the `survey` package are exactly the same as the Replicate Weighting examples. However, the single important difference is telling `R` to change the survey design setup at the very beginning as we demonstrate below.
+
+
+```default
+library(survey)
+
+# instead of ?svrepdesign() for replicate weights
+# chis_design <- svrepdesign(data=your_chis_data, ... )
+
+# use ?svydesign() for taylor series
+chis_design <- svydesign(id=~tsvrunit, 
+                         strata=~tsvarstr, 
+                         weights=~rakedw0, 
+                         data=your_chis_data,
+                         nest=TRUE)
+
+# Now, all downstream estimation functions are the same
+svymean(design=chis_design, … )
+
+```
+Below are the Taylor series examples, correctly using `svydesign()` instead of `svrepdesign()`
+
+#### Mean Calculation 
+In the following sample code, the distribution of BMI (bmi) is examined by race (racehpr2) and by the interaction between race and sex (racehpr2*srsex).    
+
+
+```default
+# Sample design specification step
+
+# Developed with 'R version 4.2.3' and 'survey version 4.1-1'
+library(survey)
+
+chis_design <- svydesign(id=~tsvrunit, 
+                         strata=~tsvarstr, 
+                         weights=~rakedw0, 
+                         data=your_chis_data,
+                         nest=TRUE)
+# Analysis
+
+chis_design |> 
+  svyby( formula = ~ bmi_p , by = ~ racehpr2,
+         FUN=svymean, vartype=c(“se”,”ci”), deff = TRUE)
+
+chis_design |> 
+  svyby( formula = ~ bmi_p , by = ~ racehpr2+srsex,
+         FUN=svymean, vartype=c(“se”,”ci”), deff = TRUE)
+
+```
+
+#### Frequency Calculation 
+In the following sample code, the percentage of people who currently have asthma (astcur) is examined by race (racehpr2) and by race and sex (racehpr2*srsex). 
+
+
+```default
+# Sample design specification step
+
+# Developed with 'R version 4.2.3' and 'survey version 4.1-1'
+library(survey)
+
+chis_design <- svydesign(id=~tsvrunit, 
+                         strata=~tsvarstr, 
+                         weights=~rakedw0, 
+                         data=your_chis_data,
+                         nest=TRUE)
+# Analysis
+
+# sub pop 1
+chis_design |> subset(srsex=="1") |> 
+  svytable(formula=~astcur+racehpr2) |>
+  prop.table()  # proportions
+
+chis_design |> subset(srsex=="1") |> 
+  svytable(formula=~astcur+ racehpr2) |>
+  # prop.table() |> 
+  summary()  # totals with chi-square stats
+
+# sub pop 2
+chis_design |> subset(srsex=="2") |> 
+  svytotal(x=~interaction(astcur, racehpr2))  # total as interaction
+
+chis_design |> subset(srsex=="2") |> 
+  svymean(x=~interaction(astcur, racehpr2)) |>
+  confint()  # confidence intervals
+
+```
+
+#### Linear Regression 
+In the following sample code, Body Mass Index (bmi) is examined in relation to race (racehpr2), sex (srsex), and age (srage) while controlling for each other. Note that racehpr2 and srsex are categorical variables, and White (racehpr2=6) and Male 
+(srsex=1) are used as their reference categories. 
+
+
+```default
+# Sample design specification step
+
+# Developed with 'R version 4.2.3' and 'survey version 4.1-1'
+library(survey)
+
+chis_design <- svydesign(id=~tsvrunit, 
+                         strata=~tsvarstr, 
+                         weights=~rakedw0, 
+                         data=your_chis_data,
+                         nest=TRUE)
+# Analysis
+
+# use relevel(ref=,...) inside the formula to pick reference category
+# can alternatively pre process data before the formula call
+
+chis_design |> 
+  svyglm(formula = bmi_p ~ relevel(as.factor(srsex),ref="2") + 
+           relevel(as.factor(racehpr2),ref="6") + 
+           srage_p,
+         family=stats::gaussian(),
+         rescale=TRUE) |> 
+         summary()
+
+
+```
+
+#### Logistic Regression 
+In the following sample code, current asthma status (astcur) is examined, controlling for race (racehpr2), sex (srsex), and age (srage). As SUDAAN and Stata require the dependent variables coded as 0 and 1 for logistic regression, a new dependent variable ast is created and assigned 1 where astcur=1 (“Current asthma”) and 0 where astcur=2 (“No current asthma”). The category “No current asthma” is used as the reference in the analysis. 
+
+
+```default
+
+# Sample design specification step
+
+# Developed with 'R version 4.2.3' and 'survey version 4.1-1'
+library(survey)
+
+chis_design <- svydesign(id=~tsvrunit, 
+                         strata=~tsvarstr, 
+                         weights=~rakedw0, 
+                         data=your_chis_data,
+                         nest=TRUE)
+
+# Analysis
+
+# use stats::update() to transform ASTCUR after the survey design spec
+# can alternatively pre process data before the survey design spec
+
+# use relevel(ref=,...) inside the formula to pick reference category
+# can alternatively pre process data before the formula call
+
+chis_design |> 
+  stats::update(ast = ifelse(astcur==2,0,1)) |>
+  svyglm(formula = ast ~ srage_p + 
+           relevel(as.factor(racehpr2),ref="6") + 
+           relevel(as.factor(srsex),ref="2"),
+         family=quasibinomial(),
+         rescale=TRUE)
+
+
+```
+
+
+### SAS
+
+#### Mean Calculation 
+In the following sample code, the distribution of BMI (bmi) is examined by race (racehpr2) and by the interaction between race and sex (racehpr2*srsex).    
+
+
+```default
+PROC SURVEYMEANS DATA = data mean stderr NOMCAR VARMETHOD=TAYLOR;
+STRATA tsvarstr; CLUSTER tsvrunit;
+WEIGHT rakedw0; 
+VAR bmi; 
+DOMAIN racehpr2 racehpr2*srsex;
+RUN; 
+
+```
+
+
+In SAS, the NOMCAR option presents the assumption that missing values are not completely at random. This, along with the DOMAIN statement, is the appropriate approach for domain analyses, which uses the entire sample for variance estimation. 
+
+When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit.
+
+If conducting a domain analysis, the DOMAIN statement is necessary for accurate variance estimation. Using BY or WHERE statements will 
+not produce valid variance estimates for the subpopulation/domain. 
+
+#### Frequency Calculation 
+In the following sample code, the percentage of people who currently have asthma (astcur) is examined by race (racehpr2) and by race and sex (racehpr2*srsex). 
+
+
+```default
+PROC SURVEYMEANS DATA = data NOMCAR VARMETHOD=TAYLOR;
+STRATA tsvarstr; CLUSTER tsvrunit; 
+WEIGHT rakedw0; 
+VAR astcur; 
+CLASS astcur; 
+DOMAIN racehpr2 racehpr2*srsex;
+RUN;   
+
+```
+Alternatively, PROC SURVEYFREQ may be useful especially for the variables with more than two categories. One caveat in creating multiple tables in one PROC SURVEYFREQ procedure is that the procedure takes the smallest applicable sample sizes among all variables. Therefore, creating one table per one PROC SURVEYFREQ procedure is recommended: 
+
+```default
+PROC SURVEYFREQ DATA = data NOMCAR VARMETHOD=TAYLOR;
+STRATA tsvarstr; CLUSTER tsvrunit; 
+WEIGHT rakedw0; 
+TABLE racehpr2*asctur/row; 
+RUN;   
+
+PROC SURVEYFREQ DATA = data NOMCAR VARMETHOD=TAYLOR;
+STRATA tsvarstr; CLUSTER tsvrunit; 
+WEIGHT rakedw0; 
+TABLE srsex*racehpr2*astcur/row; 
+RUN; 
+
+```
+
+In SAS, the NOMCAR option presents the assumption that missing values are not completely at random. This, along with the DOMAIN statement, is the appropriate approach for domain analyses, which uses the entire sample for variance estimation.
+ 
+When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit.
+ 
+If conducting a domain analysis , the DOMAIN statement is necessary for accurate variance estimation. Using BY or WHERE statements will 
+not produce valid variance estimates for the subpopulation/domain. 
+
+#### Linear Regression 
+In the following sample code, Body Mass Index (bmi) is examined in relation to race (racehpr2), sex (srsex), and age (srage) while controlling for each other. Note that racehpr2 and srsex are categorical variables, and White (racehpr2=6) and Male 
+(srsex=1) are used as their reference categories. 
+
+
+```default
+PROC SURVEYREG DATA = data NOMCAR VARMETHOD=TAYLOR;
+STRATA tsvarstr; CLUSTER tsvrunit; 
+WEIGHT rakedw0; 
+FORMAT racehpr2 racehprf. srsex srsex.; 
+CLASS racehpr2 srsex;
+MODEL bmi = srsex racehpr2 srage/SOLUTION; 
+RUN; 
+
+```
+
+In SAS, the NOMCAR option presents the assumption that missing values are not completely at random.  
+ 
+When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit.
+
+When the values are formatted either in the data step or in the procedure, SAS automatically picks the category of the categorical variables whose label is alphabetically last as a reference group.
+
+SOLUTION option provides the parameter estimates when using a CLASS statement. 
+
+#### Logistic Regression 
+In the following sample code, current asthma status (astcur) is examined, controlling for race (racehpr2), sex (srsex), and age (srage). As SUDAAN and Stata require the dependent variables coded as 0 and 1 for logistic regression, a new dependent variable ast is created and assigned 1 where astcur=1 (“Current asthma”) and 0 where astcur=2 (“No current asthma”). The category “No current asthma” is used as the reference in the analysis. 
+
+
+```default
+PROC SURVEYLOGISTIC DATA = data NOMCAR VARMETHOD=TAYLOR;
+FORMAT astcur astcurf. racehpr2 racehprf. srsex srsex.;
+STRATA tsvarstr; 
+CLUSTER tsvrunit;
+WEIGHT rakedw0; 
+CLASS astcur (REF=“NO CURRENT ASTHMA”) racehpr2 (REF=“WHITE”) srsex (REF=“MALE”)/PARAM=REF;
+MODEL astcur = racehpr2 srsex srage;
+RUN; 
+
+```
+
+In SAS, the NOMCAR option presents the assumption that missing values are not completely at random. This, along with the DOMAIN statement, is the appropriate approach for domain analyses, which uses the entire sample for variance estimation.
+
+When the values are formatted either in the data setup or in the procedure, SAS automatically picks the category of the categorical variables whose label is in the last alphabetical order as the reference group. In PROC SURVEYLOGISTIC, the reference category of the independent and dependent variables may be specified in a CLASS statement.
+
+When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit.
+
+PARAM=REF is specified to ensure dummy coding of the categorical independent variables.
+
+
+
+### SUDAAN
+
+#### Mean Calculation 
+In the following sample code, the distribution of BMI (bmi) is examined by race (racehpr2) and by the interaction between race and sex (racehpr2*srsex).    
+
+
+```default
+PROC SORT DATA = data; 
+BY tsvarstr tsvrunit;
+RUN; 
+ 
+PROC DESCRIPTIVE DATA = data FILETYPE=SAS DESIGN=WR; 
+NEST tsvarstr tsvrunit;  
+WEIGHT rakedw0; 
+CLASS racehpr2 racehpr2*srsex; 
+VAR bmi; 
+TABLES racehpr2 racehpr2*srsex; 
+SUBGROUP racehpr2 srsex; 
+LEVELS 7 2; 
+RUN; 
+
+```
+
+When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit. 
+
+#### Frequency Calculation 
+In the following sample code, the percentage of people who currently have asthma (astcur) is examined by race (racehpr2) and by race and sex (racehpr2*srsex). 
+
+```default
+PROC SORT DATA = data; 
+BY tsvarstr tsvrunit;
+RUN; 
+  
+PROC CROSSTAB DATA = data FILETYPE=SAS DESIGN=WR; 
+NEST tsvarstr tsvrunit;  
+WEIGHT rakedw0; 
+TABLES racehpr2*astcur srsex*racehpr2*astcur; 
+SUBGROUP astcur racehpr2 srsex; 
+LEVELS 2 7 2; 
+RUN; 
+
+```
+
+When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit. 
+ 
+
+#### Linear Regression 
+In the following sample code, Body Mass Index (bmi) is examined in relation to race (racehpr2), sex (srsex), and age (srage) while controlling for each other. Note that racehpr2 and srsex are categorical variables, and White (racehpr2=6) and Male 
+(srsex=1) are used as their reference categories. 
+
+```default
+PROC SORT DATA = data; 
+BY tsvarstr tsvrunit; 
+RUN; 
+ 
+PROC REGRESS DATA = data FILETYPE=SAS DESIGN=WR; 
+NEST tsvarstr tsvrunit; 
+WEIGHT rakedw0; 
+SUBGROUP racehpr2 srsex; 
+LEVELS 7 2; 
+REFLEVEL racehpr2=6 srsex=1; 
+MODEL bmi = racehpr2 srsex srage; 
+RUN; 
+
+```
+
+When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit. 
+
+
+#### Logistic Regression 
+In the following sample code, current asthma status (astcur) is examined, controlling for race (racehpr2), sex (srsex), and age (srage). As SUDAAN and Stata require the dependent variables coded as 0 and 1 for logistic regression, a new dependent variable ast is created and assigned 1 where astcur=1 (“Current asthma”) and 0 where astcur=2 (“No current asthma”). The category “No current asthma” is used as the reference in the analysis. 
+
+
+```default
+DATA newdata; 
+SET data; 
+IF astcur=1 THEN ast=1; 
+ELSE IF astcur=2 THEN ast=0; 
+RUN;   
+
+PROC RLOGIST data = newdata FILETYPE=SAS DESIGN=WR; 
+WEIGHT rakedw0; 
+NEST tsvarstr tsvrunit; 
+SUBGROUP racehpr2 srsex; 
+LEVELS 7 2; 
+REFLEVEL racehpr2 = 6 srsex = 1; 
+MODEL ast = racehpr2 srsex srage; RUN; 
+
+```
+
+
+### SPSS
+
+
+#### Mean Calculation 
+In the following sample code, the distribution of BMI (bmi) is examined by race (racehpr2) and by the interaction between race and sex (racehpr2*srsex).    
+
+
+```default
+*Sample design specification step*
+*	Analysis Preparation Wizard. 
+
+CSPLAN ANALYSIS 
+ /PLAN FILE=‘\\PATH FOR COMPLEX SURVEY PLAN FILE\FILENAME.csaplan’ 
+ /PLANVARS ANALYSISWEIGHT=RAKEDW0 
+ /PRINT PLAN 
+ /DESIGN STRATA= TSVARSTR CLUSTER=TSVRUNIT
+ /ESTIMATOR TYPE=WR. 
+  
+*Analysis* 
+*	Complex Samples Descriptives. 
+CSDESCRIPTIVES 
+ /PLAN FILE = ‘\\PATH FOR COMPLEX SURVEY PLAN FILE\FILENAME.csaplan’ 
+ /SUMMARY VARIABLES = bmi 
+ /SUBPOP TABLE = racehpr2 DISPLAY=LAYERED 
+ /MEAN 
+ /STATISTICS SE CV POPSIZE CIN (95) 
+ /MISSING SCOPE = ANALYSIS CLASSMISSING = EXCLUDE. 
+*	Complex Samples Descriptives. 
+CSDESCRIPTIVES 
+ /PLAN FILE = ‘\\PATH FOR COMPLEX SURVEY PLAN FILE\FILENAME.csaplan’ 
+ /SUMMARY VARIABLES = bmi 
+ /SUBPOP TABLE = racehpr2 BY sex DISPLAY=LAYERED 
+ /MEAN 
+ /STATISTICS SE CV POPSIZE CIN (95) 
+ /MISSING SCOPE = ANALYSIS CLASSMISSING = EXCLUDE. 
+
+
+```
+In SPSS, the sample design specification step should be included before conducting any analysis.
+
+When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit. 
+
+#### Frequency Calculation 
+In the following sample code, the percentage of people who currently have asthma (astcur) is examined by race (racehpr2) and by race and sex (racehpr2*srsex). 
+
+
+
+
+```default
+*Sample design specification step*
+*	Analysis Preparation Wizard. 
+
+CSPLAN ANALYSIS 
+ /PLAN FILE=‘\\PATH FOR COMPLEX SURVEY PLAN FILE\FILENAME.csaplan’ 
+ /PLANVARS ANALYSISWEIGHT=RAKEDW0 
+ /PRINT PLAN 
+ /DESIGN STRATA= TSVARSTR CLUSTER=TSVRUNIT
+ /ESTIMATOR TYPE=WR. 
+ 
+*Analysis*  
+*	Complex Samples Crosstabs. 
+CSTABULATE 
+ /PLAN FILE = ‘\\PATH FOR COMPLEX SURVEY PLAN FILE\FILENAME.csaplan’ 
+ /TABLES VARIABLES = astcur BY racehpr2 
+ /SUBPOP TABLE = srsex DISPLAY=LAYERED 
+ /CELLS POPSIZE COLPCT 
+ /STATISTICS SE CV CIN (95) 
+ /MISSING SCOPE = TABLE CLASSMISSING = EXCLUDE. 
+
+
+```
+In SPSS, the sample design specification step should be included before conducting any analysis. 
+
+When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit. 
+ 
+ 
+#### Linear Regression 
+In the following sample code, Body Mass Index (bmi) is examined in relation to race (racehpr2), sex (srsex), and age (srage) while controlling for each other. Note that racehpr2 and srsex are categorical variables, and White (racehpr2=6) and Male 
+(srsex=1) are used as their reference categories. 
+
+```default
+*Sample design specification step*
+* Analysis Preparation Wizard. 
+
+CSPLAN ANALYSIS 
+ /PLAN FILE=‘\\PATH FOR COMPLEX SURVEY PLAN FILE\FILENAME.csaplan’ 
+ /PLANVARS ANALYSISWEIGHT=RAKEDW0 
+ /PRINT PLAN 
+ /DESIGN STRATA= TSVARSTR CLUSTER=TSVRUNIT
+ /ESTIMATOR TYPE=WR. 
+ 
+*Analysis*   
+RECODE 
+srsex 
+ (1=2) (2=1) INTO newsex. 
+VARIABLE LABELS newsex ‘NEWSEX’. 
+EXECUTE. 
+ 
+RECODE  
+racehpr2 
+ (1=1) (2=2) (3=3) (4=4) (5=5) (6=7) (7=6) INTO newrace. 
+ 
+VARIABLE LABELS newrace ‘NEWRACEHPR2’. 
+EXECUTE. 
+
+* Complex Samples General Linear Model. 
+CSGLM bmi BY newsex newrace WITH srage 
+ /PLAN FILE = ‘\\PATH FOR COMPLEX SURVEY PLAN FILE\FILENAME.csaplan’ 
+ /MODEL newsex newrace srage 
+ /INTERCEPT INCLUDE=YES SHOW=YES 
+ /STATISTICS PARAMETER SE CINTERVAL 
+ /PRINT SUMMARY VARIABLEINFO SAMPLEINFO 
+ /TEST TYPE=F PADJUST=LSD 
+ /MISSING CLASSMISSING=EXCLUDE 
+ /CRITERIA CILEVEL=95. 
+
+```
+In SPSS, the sample design specification step should be included before conducting any analysis.
+
+When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit. 
+
+SPSS CSGLM automatically chooses the highest value of the categorical independent variables as the reference groups. Therefore, recoding categorical variables is necessary to select the desired reference categories if they are different than the categories with the highest values. 
+
+
+#### Logistic Regression 
+In the following sample code, current asthma status (astcur) is examined, controlling for race (racehpr2), sex (srsex), and age (srage). As SUDAAN and Stata require the dependent variables coded as 0 and 1 for logistic regression, a new dependent variable ast is created and assigned 1 where astcur=1 (“Current asthma”) and 0 where astcur=2 (“No current asthma”). The category “No current asthma” is used as the reference in the analysis. 
+
+
+```default
+*Sample design specification step*
+* Analysis Preparation Wizard. 
+
+CSPLAN ANALYSIS 
+ /PLAN FILE=‘\\PATH FOR COMPLEX SURVEY PLAN FILE\FILENAME.csaplan’ 
+ /PLANVARS ANALYSISWEIGHT=RAKEDW0 
+ /PRINT PLAN 
+ /DESIGN STRATA= TSVARSTR CLUSTER=TSVRUNIT
+ /ESTIMATOR TYPE=WR. 
+ 
+*Analysis*  
+
+RECODE  srsex   
+ (1=2) (2=1) INTO newsex.  
+VARIABLE LABELS newsex 'NEWSEX'.  
+EXECUTE. 
+  
+RECODE   racehpr2   
+ (1=1) (2=2) (3=3) (4=4) (5=5) (6=7) (7=6) INTO newrace.  VARIABLE LABELS newrace 'NEWRACEHPR2'.  EXECUTE. 
+  
+* Complex Samples Logistic Regression.  
+
+CSLOGISTIC astcur BY newsex newrace WITH srage  
+ /PLAN FILE = '\\PATH FOR COMPLEX SURVEY PLAN FILE\FILENAME.csaplan'  
+ /MODEL newsex newrace srage  
+ /INTERCEPT INCLUDE=YES SHOW=YES  
+ /STATISTICS PARAMETER EXP SE CINTERVAL  
+ /TEST TYPE=F PADJUST=LSD  
+ /ODDSRATIOS FACTOR=[newsex]  
+ /ODDSRATIOS FACTOR=[newrace]  
+ /ODDSRATIOS COVARIATE=[srage]  
+ /MISSING CLASSMISSING=EXCLUDE  
+ /CRITERIA MXITER=100 MXSTEP=5 PCONVERGE=[1e-006 RELATIVE]  
+  LCONVERGE=[0] CHKSEP=20 CILEVEL=95   
+/PRINT SUMMARY VARIABLEINFO SAMPLEINFO. 
+
+```
+In SPSS, the sample design specification step should be included before conducting any analysis.
+
+When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit.
+
+SPSS CSLOGISTIC automatically chooses the highest value of the categorical variable as the reference group for the independent variables as well as the dependent variable. Therefore, recoding categorical variables is necessary to select the desired reference categories if they are different than the categories with highest values.
+
+
