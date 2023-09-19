@@ -1,5 +1,5 @@
 ---
-title: "Sample Code Examples"
+title: "Sample Code to Analyze CHIS Data"
 format: 
   html:
     code-block-border-left: true
@@ -7,9 +7,15 @@ format:
     toc: true
     toc-depth: 4
     toc-expand: true
+  docx:
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    number-depth: 2
+    highlight-style: github
 ---
 
-# Sample Code to Analyze CHIS Data 
+# Intro
 
 This page provides sample code for appropriately analyzing California Health Interview Survey (CHIS) data in several statistical software packages using the replicate weights method or the Taylor series linearization method. For a summary of how weighting and variance estimation work in analyzing CHIS Data, refer to the page on Weighting and Variance Estimation.
 
@@ -37,7 +43,7 @@ Below are sample codes.
   - Stata, SAS, (R package in progress).
 
 
-## Replicate Weights
+# Replicate Weights
 
 This document contains information on using replicate weights to accurately calculate variance with the California Health Interview Survey (CHIS) data and also contains sample codes for generating means, frequencies, and for performing linear regressions and logistic regressions. 
 
@@ -55,9 +61,9 @@ For continuous variables, sample calculations of means and linear regression ana
 
 
 
-### Stata
+## Stata
 
-#### Mean Calculation 
+### Mean Calculation 
 In the following sample code, the distribution of BMI (bmi_p) is examined by race (racehpr2) and by race and sex (racehpr2*srsex).    
 
 ```default
@@ -73,7 +79,7 @@ svy: mean bmi_p, over(srsex racehpr2)
 In Stata, the sample design specification step should be included before conducting any analysis. 
 
 
-#### Frequency Calculation 
+### Frequency Calculation 
 In the following sample code, the percentage of people who currently have asthma (astcur) is examined by race (racehpr2) and by race and sex (racehpr2*srsex). 
 
 ```default
@@ -91,7 +97,7 @@ In Stata, the sample design specification step should be included before conduct
 
 Stata V.10 and higher cannot accommodate 3 or more variables in the tab command. 
 
-#### Linear Regression 
+### Linear Regression 
 In the following sample code, Body Mass Index (bmi_p) is examined in relation to race (racehpr2), sex (srsex), and age 
 (srage_p) while controlling for each other. Note that racehpr2 and srsex are categorical variables; White (racehpr2=6) and Male (srsex=1) are used as their reference categories. 
 
@@ -112,7 +118,7 @@ In Stata, the sample design specification step should be included before conduct
 Recoding is done in order to choose “White” (racehpr2=6) as the reference group.
 
 
-#### Logistic Regression 
+### Logistic Regression 
 In the following sample code, current asthma status (astcur) is examined, controlling for race (racehpr2), sex (srsex), and age (srage_p). SUDAAN and Stata require the dependent variables to be coded as 0 and 1 for logistic regression, so a new dependent variable ast is created and assigned 1 where astcur=1 (“Current asthma”) and 0 where astcur=2 (“No current asthma”). The category “No current asthma” is used as the reference in the analysis. 
 
 ```default
@@ -135,10 +141,10 @@ In Stata, the sample design specification step should be included before conduct
 `logistic` produces odds ratios. Stata automatically chooses the lowest value of the categorical variable as the reference group for the independent and dependent variables.   
 
 
-### R
+## R
 
 
-#### Mean Calculation 
+### Mean Calculation 
 In the following sample code, the distribution of BMI (bmi_p) is examined by race (racehpr2) and by race and sex (racehpr2*srsex).    
 
 ```default
@@ -164,7 +170,7 @@ chis_design |>
 ```
 
 
-#### Frequency Calculation 
+### Frequency Calculation 
 In the following sample code, the percentage of people who currently have asthma (astcur) is examined by race (racehpr2) and by race and sex (racehpr2*srsex). 
 
 ```default
@@ -199,7 +205,7 @@ chis_design |> subset(srsex=="2") |>
 
 ```
 
-#### Linear Regression 
+### Linear Regression 
 In the following sample code, Body Mass Index (bmi_p) is examined in relation to race (racehpr2), sex (srsex), and age 
 (srage_p) while controlling for each other. Note that racehpr2 and srsex are categorical variables; White (racehpr2=6) and Male (srsex=1) are used as their reference categories. 
 
@@ -229,7 +235,7 @@ chis_design |>
 
 ```
 
-#### Logistic Regression 
+### Logistic Regression 
 In the following sample code, current asthma status (astcur) is examined, controlling for race (racehpr2), sex (srsex), and age (srage_p). SUDAAN and Stata require the dependent variables to be coded as 0 and 1 for logistic regression, so a new dependent variable ast is created and assigned 1 where astcur=1 (“Current asthma”) and 0 where astcur=2 (“No current asthma”). The category “No current asthma” is used as the reference in the analysis. 
 
 ```default
@@ -262,9 +268,9 @@ chis_design |>
 
 ```
 
-### SAS
+## SAS
 
-#### Mean Calculation 
+### Mean Calculation 
 In the following sample code, the distribution of BMI (bmi_p) is examined by race (racehpr2) and by race and sex (racehpr2*srsex).    
 
 ```default
@@ -296,7 +302,7 @@ Jackknife coefficients are necessary for accurate variance calculations, and jac
 
 This produces racehpr2*srsex grouping.  
 
-#### Frequency Calculation 
+### Frequency Calculation 
 
 In the following sample code, the percentage of people who currently have asthma (astcur) is examined by race (racehpr2) and by race and sex (racehpr2*srsex). 
 
@@ -349,7 +355,7 @@ if data year >= 2019, then JKCOEFFS = 0.5.
 This produces racehpr2*srsex grouping.  
  
 
-#### Linear Regression 
+### Linear Regression 
 
 In the following sample code, Body Mass Index (bmi_p) is examined in relation to race (racehpr2), sex (srsex), and age 
 (srage_p) while controlling for each other. Note that racehpr2 and srsex are categorical variables; White (racehpr2=6) and Male (srsex=1) are used as their reference categories. 
@@ -370,7 +376,7 @@ When the values are formatted either in the data step or in the procedure, SAS a
 
 SOLUTION option provides the parameter estimates when using a CLASS statement. 
 
-#### Logistic Regression 
+### Logistic Regression 
 
 In the following sample code, current asthma status (astcur) is examined, controlling for race (racehpr2), sex (srsex), and age (srage_p). SUDAAN and Stata require the dependent variables to be coded as 0 and 1 for logistic regression, so a new dependent variable ast is created and assigned 1 where astcur=1 (“Current asthma”) and 0 where astcur=2 (“No current asthma”). The category “No current asthma” is used as the reference in the analysis. 
 
@@ -393,9 +399,9 @@ PARAM=REF is specified to ensure dummy coding of the categorical independent var
 
 
 
-### SUDAAN
+## SUDAAN
 
-#### Mean Calculation 
+### Mean Calculation 
 In the following sample code, the distribution of BMI (bmi_p) is examined by race (racehpr2) and by race and sex (racehpr2*srsex).    
 
 ```default
@@ -411,7 +417,7 @@ RUN;
 
 ```
 
-#### Frequency Calculation 
+### Frequency Calculation 
 In the following sample code, the percentage of people who currently have asthma (astcur) is examined by race (racehpr2) and by race and sex (racehpr2*srsex). 
 
 ```default
@@ -425,7 +431,7 @@ RUN;
 
 ```
 
-#### Linear Regression 
+### Linear Regression 
 In the following sample code, Body Mass Index (bmi_p) is examined in relation to race (racehpr2), sex (srsex), and age 
 (srage_p) while controlling for each other. Note that racehpr2 and srsex are categorical variables; White (racehpr2=6) and Male (srsex=1) are used as their reference categories. 
 
@@ -442,7 +448,7 @@ RUN;
 ```
 
 
-#### Logistic Regression 
+### Logistic Regression 
 In the following sample code, current asthma status (astcur) is examined, controlling for race (racehpr2), sex (srsex), and age (srage_p). SUDAAN and Stata require the dependent variables to be coded as 0 and 1 for logistic regression, so a new dependent variable ast is created and assigned 1 where astcur=1 (“Current asthma”) and 0 where astcur=2 (“No current asthma”). The category “No current asthma” is used as the reference in the analysis. 
 
 ```default
@@ -464,7 +470,7 @@ MODEL ast = racehpr2 srsex srage_p; RUN;
 
 
 
-## Taylor Series
+# Taylor Series
 
 This document contains information on using the Taylor series linearization method to accurately calculate variance with the California Health Interview Survey (CHIS) data and also contains sample codes for generating means, frequencies, and for performing linear regressions and logistic regressions. 
 
@@ -481,9 +487,9 @@ For continuous variables, sample calculations of means and linear regression ana
 
 
 
-### Stata
+## Stata
 
-#### Mean Calculation 
+### Mean Calculation 
 In the following sample code, the distribution of BMI (bmi) is examined by race (racehpr2) and by the interaction between race and sex (racehpr2*srsex).    
 
 
@@ -502,7 +508,7 @@ In Stata, the sample design specification step should be included before conduct
  
 When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit. 
 
-#### Frequency Calculation 
+### Frequency Calculation 
 In the following sample code, the percentage of people who currently have asthma (astcur) is examined by race (racehpr2) and by race and sex (racehpr2*srsex). 
 
 ```default
@@ -523,7 +529,7 @@ When using concatenated data across adults, adolescents, and/or children, use ts
 
 Stata V.10 and higher cannot accommodate 3 or more variables in the tab command. 
 
-#### Linear Regression 
+### Linear Regression 
 In the following sample code, Body Mass Index (bmi) is examined in relation to race (racehpr2), sex (srsex), and age (srage) while controlling for each other. Note that racehpr2 and srsex are categorical variables, and White (racehpr2=6) and Male 
 (srsex=1) are used as their reference categories. 
 
@@ -546,7 +552,7 @@ When using concatenated data across adults, adolescents, and/or children, use ts
 Reordering is done in order to choose “White” (racehpr2=6) as the reference group. 
 
 
-#### Logistic Regression 
+### Logistic Regression 
 In the following sample code, current asthma status (astcur) is examined, controlling for race (racehpr2), sex (srsex), and age (srage). As SUDAAN and Stata require the dependent variables coded as 0 and 1 for logistic regression, a new dependent variable ast is created and assigned 1 where astcur=1 (“Current asthma”) and 0 where astcur=2 (“No current asthma”). The category “No current asthma” is used as the reference in the analysis. 
 
 ```default
@@ -572,7 +578,7 @@ When using concatenated data across adults, adolescents, and/or children, use ts
 `logistic`  produces odds ratios. Stata automatically chooses the lowest value of the categorical variable as the reference group for the independent and dependent variables. 
 
 
-### R
+## R
 
 The Taylor Series estimation examples in `R` using the `survey` package are exactly the same as the Replicate Weighting examples. However, the single important difference is telling `R` to change the survey design setup at the very beginning as we demonstrate below.
 
@@ -596,7 +602,7 @@ svymean(design=chis_design, … )
 ```
 Below are the Taylor series examples, correctly using `svydesign()` instead of `svrepdesign()`
 
-#### Mean Calculation 
+### Mean Calculation 
 In the following sample code, the distribution of BMI (bmi) is examined by race (racehpr2) and by the interaction between race and sex (racehpr2*srsex).    
 
 
@@ -623,7 +629,7 @@ chis_design |>
 
 ```
 
-#### Frequency Calculation 
+### Frequency Calculation 
 In the following sample code, the percentage of people who currently have asthma (astcur) is examined by race (racehpr2) and by race and sex (racehpr2*srsex). 
 
 
@@ -660,7 +666,7 @@ chis_design |> subset(srsex=="2") |>
 
 ```
 
-#### Linear Regression 
+### Linear Regression 
 In the following sample code, Body Mass Index (bmi) is examined in relation to race (racehpr2), sex (srsex), and age (srage) while controlling for each other. Note that racehpr2 and srsex are categorical variables, and White (racehpr2=6) and Male 
 (srsex=1) are used as their reference categories. 
 
@@ -692,7 +698,7 @@ chis_design |>
 
 ```
 
-#### Logistic Regression 
+### Logistic Regression 
 In the following sample code, current asthma status (astcur) is examined, controlling for race (racehpr2), sex (srsex), and age (srage). As SUDAAN and Stata require the dependent variables coded as 0 and 1 for logistic regression, a new dependent variable ast is created and assigned 1 where astcur=1 (“Current asthma”) and 0 where astcur=2 (“No current asthma”). The category “No current asthma” is used as the reference in the analysis. 
 
 
@@ -729,9 +735,9 @@ chis_design |>
 ```
 
 
-### SAS
+## SAS
 
-#### Mean Calculation 
+### Mean Calculation 
 In the following sample code, the distribution of BMI (bmi) is examined by race (racehpr2) and by the interaction between race and sex (racehpr2*srsex).    
 
 
@@ -753,7 +759,7 @@ When using concatenated data across adults, adolescents, and/or children, use ts
 If conducting a domain analysis, the DOMAIN statement is necessary for accurate variance estimation. Using BY or WHERE statements will 
 not produce valid variance estimates for the subpopulation/domain. 
 
-#### Frequency Calculation 
+### Frequency Calculation 
 In the following sample code, the percentage of people who currently have asthma (astcur) is examined by race (racehpr2) and by race and sex (racehpr2*srsex). 
 
 
@@ -791,7 +797,7 @@ When using concatenated data across adults, adolescents, and/or children, use ts
 If conducting a domain analysis , the DOMAIN statement is necessary for accurate variance estimation. Using BY or WHERE statements will 
 not produce valid variance estimates for the subpopulation/domain. 
 
-#### Linear Regression 
+### Linear Regression 
 In the following sample code, Body Mass Index (bmi) is examined in relation to race (racehpr2), sex (srsex), and age (srage) while controlling for each other. Note that racehpr2 and srsex are categorical variables, and White (racehpr2=6) and Male 
 (srsex=1) are used as their reference categories. 
 
@@ -815,7 +821,7 @@ When the values are formatted either in the data step or in the procedure, SAS a
 
 SOLUTION option provides the parameter estimates when using a CLASS statement. 
 
-#### Logistic Regression 
+### Logistic Regression 
 In the following sample code, current asthma status (astcur) is examined, controlling for race (racehpr2), sex (srsex), and age (srage). As SUDAAN and Stata require the dependent variables coded as 0 and 1 for logistic regression, a new dependent variable ast is created and assigned 1 where astcur=1 (“Current asthma”) and 0 where astcur=2 (“No current asthma”). The category “No current asthma” is used as the reference in the analysis. 
 
 
@@ -841,9 +847,9 @@ PARAM=REF is specified to ensure dummy coding of the categorical independent var
 
 
 
-### SUDAAN
+## SUDAAN
 
-#### Mean Calculation 
+### Mean Calculation 
 In the following sample code, the distribution of BMI (bmi) is examined by race (racehpr2) and by the interaction between race and sex (racehpr2*srsex).    
 
 
@@ -866,7 +872,7 @@ RUN;
 
 When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit. 
 
-#### Frequency Calculation 
+### Frequency Calculation 
 In the following sample code, the percentage of people who currently have asthma (astcur) is examined by race (racehpr2) and by race and sex (racehpr2*srsex). 
 
 ```default
@@ -887,7 +893,7 @@ RUN;
 When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit. 
  
 
-#### Linear Regression 
+### Linear Regression 
 In the following sample code, Body Mass Index (bmi) is examined in relation to race (racehpr2), sex (srsex), and age (srage) while controlling for each other. Note that racehpr2 and srsex are categorical variables, and White (racehpr2=6) and Male 
 (srsex=1) are used as their reference categories. 
 
@@ -910,7 +916,7 @@ RUN;
 When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit. 
 
 
-#### Logistic Regression 
+### Logistic Regression 
 In the following sample code, current asthma status (astcur) is examined, controlling for race (racehpr2), sex (srsex), and age (srage). As SUDAAN and Stata require the dependent variables coded as 0 and 1 for logistic regression, a new dependent variable ast is created and assigned 1 where astcur=1 (“Current asthma”) and 0 where astcur=2 (“No current asthma”). The category “No current asthma” is used as the reference in the analysis. 
 
 
@@ -932,10 +938,10 @@ MODEL ast = racehpr2 srsex srage; RUN;
 ```
 
 
-### SPSS
+## SPSS
 
 
-#### Mean Calculation 
+### Mean Calculation 
 In the following sample code, the distribution of BMI (bmi) is examined by race (racehpr2) and by the interaction between race and sex (racehpr2*srsex).    
 
 
@@ -974,7 +980,7 @@ In SPSS, the sample design specification step should be included before conducti
 
 When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit. 
 
-#### Frequency Calculation 
+### Frequency Calculation 
 In the following sample code, the percentage of people who currently have asthma (astcur) is examined by race (racehpr2) and by race and sex (racehpr2*srsex). 
 
 
@@ -1008,7 +1014,7 @@ In SPSS, the sample design specification step should be included before conducti
 When using concatenated data across adults, adolescents, and/or children, use tsvrunit; when using separate data files, delete the commands associated with tsvrunit. 
  
  
-#### Linear Regression 
+### Linear Regression 
 In the following sample code, Body Mass Index (bmi) is examined in relation to race (racehpr2), sex (srsex), and age (srage) while controlling for each other. Note that racehpr2 and srsex are categorical variables, and White (racehpr2=6) and Male 
 (srsex=1) are used as their reference categories. 
 
@@ -1056,7 +1062,7 @@ When using concatenated data across adults, adolescents, and/or children, use ts
 SPSS CSGLM automatically chooses the highest value of the categorical independent variables as the reference groups. Therefore, recoding categorical variables is necessary to select the desired reference categories if they are different than the categories with the highest values. 
 
 
-#### Logistic Regression 
+### Logistic Regression 
 In the following sample code, current asthma status (astcur) is examined, controlling for race (racehpr2), sex (srsex), and age (srage). As SUDAAN and Stata require the dependent variables coded as 0 and 1 for logistic regression, a new dependent variable ast is created and assigned 1 where astcur=1 (“Current asthma”) and 0 where astcur=2 (“No current asthma”). The category “No current asthma” is used as the reference in the analysis. 
 
 
@@ -1106,14 +1112,14 @@ SPSS CSLOGISTIC automatically chooses the highest value of the categorical varia
 
 
 
-## Sample Code to Pool Multiple Data Cycles
+# Sample Code to Pool Multiple Data Cycles
 
 For background on pooling two or more data files, see the page on Pooling.
 
 The following Stata and SAS/SUDAAN codes show how to combine CHIS 2017 and 2018 data files and to create weights accounting for the multi-year files. In addition to the sample code, we also provide a SAS macro for the user interested in analyzing CHIS data in SAS. This SAS macro will do all the work of weight adjustments automatically, and also generate other necessary information needed in later analysis. You can download this in the section CHIS Pooling Macro.
 
 
-### Stata
+## Stata
 
 
 ```default
@@ -1171,7 +1177,7 @@ svyset [pw=fnwgt0], jkrw(fnwgt1-fnwgt160, multiplier(1)) vce(jack) mse
 
 The above Stata code illustrate how to extract stored estimates from Stata commands and perform data operations based on the saved data. For Stata, returned Stata results are saved to Stata scalars and can be accessed later. For generating results from both years, users may choose to either use DISPLAY command to outputs these scalars in results window or use PUTEXCEL to save the results to an Excel file.
 
-### SAS / SUDAAN
+## SAS / SUDAAN
 
 
 ```default
@@ -1218,14 +1224,14 @@ For SAS, ODS OUTPUT statement saves the outputs from SAS procedures to a working
 In this example, results are saved in the EST_COMBINED data, users may choose to use PROC PRINT to display the results in ODS window, or use PROC EXPORT to output them to an Excel file.
 
 
-### CHIS Pooling Macro
+## CHIS Pooling Macro
 
 In addition to the sample code above, we also provide a SAS macro for the user interested in analyzing CHIS data in SAS. This SAS macro will do all the work of weight adjustments automatically, and also generate other necessary information needed in later analysis. You can download this macro here: CHIS Pooling Macro
 
 
 https://legacy.healthpolicy.ucla.edu/chis/analyze/Documents/CHIS%20POOLING%20MACRO.zip
 
-### Video Tutorial
+## Video Tutorial
 
 https://www.youtube.com/watch?v=_aQtdQWmGSc
 
