@@ -5,34 +5,55 @@ format:
     code-block-border-left: true
     highlight-style: github
     toc: true
+    toc-depth: 4
     toc-expand: true
 ---
 
 # Sample Code to Analyze CHIS Data 
 
-This page provides links to sample code for appropriately analyzing California Health Interview Survey (CHIS) data in several statistical software packages using the replicate weights method or the Taylor series linearization method. For a summary of how weighting and variance estimation work in analyzing CHIS Data, refer to Weighting and Variance Estimation.
+This page provides sample code for appropriately analyzing California Health Interview Survey (CHIS) data in several statistical software packages using the replicate weights method or the Taylor series linearization method. For a summary of how weighting and variance estimation work in analyzing CHIS Data, refer to the page on Weighting and Variance Estimation.
 
+CHIS employs a complex sample design and requires proper weighting and variance (or its square root – standard error) calculation of the estimates. With default settings, most statistical software packages calculate variance assuming that the data are from a simple random sample; this underestimates the variance of estimates produced from CHIS data.  
 
-CHIS employs a complex sample design and requires proper weighting and variance (or its square root – standard error) calculation of the estimates. Most statistical software packages calculate variance assuming that the data are from a simple random sample; this underestimates the variance of estimates produced from CHIS data.  
+In order to accurately estimate variance in analyses of CHIS data, a complex sample, either replicate weights or the Taylor series linearization method may be used.
 
-In order to accurately estimate variance in analyses of CHIS data, either replicate weights or the Taylor series linearization method may be used. This document describes the use of the Taylor series linearization method; for more information on replicate weights, see “Methodology Brief—Weighting and Estimation of Variance in the CHIS Public Use Files”. The required variables for Taylor series linearization method (tsvarstr and tsvrunit) have not been included in the CHIS Public Use Files. 
+The final weight (rakedw0) accounts for the sample selection probabilities and statistical adjustments for potential undercoverage and nonresponse biases. In addition, when this weight is applied, it ensures that estimates from the CHIS sample are an unbiased representation of the California population. Using only rakedw0 without replicate weights rakedw1-rakedw80 or the sample design information will produce unbiased point estimates, but would underestimate the variability due to the incorrect assumption that the sample was drawn with simple random sampling.
 
 In comparison with replicate weights, the Taylor series linearization method requires much less computing time, but requires more attention on specifying the sampling design and on appropriate handling of subpopulation analyses. The variable that accounts for sample stratification is tsvarstr. When any of the adult, adolescent, or child data files are concatenated, each household becomes like a cluster; therefore, the clustering unit variable tsvrunit should be included, but should not be included if the data files are analyzed independently of each other. If the data needs to be subset, it should be done prior to the analysis in a separate step, with the remainder of the population set to missing. 
 
-The final weight (rakedw0) accounts for the sample selection probabilities and statistical adjustments for potential undercoverage and nonresponse biases. In addition, when this weight is applied, it ensures that estimates from the CHIS sample are an unbiased representation of the California population. Using only rakedw0 without sample design information in analyzing CHIS data will produce unbiased estimates, but would underestimate the variability due to the incorrect assumption that the sample was drawn with simple random sampling.
+Confidential CHIS data may utilize either replicate weights or the Taylor series linearization method. PUF data may only utilize replicate weights. The required variables for the Taylor series linearization method (tsvarstr and tsvrunit) have not been included in the CHIS Public Use Files. 
+
 
 
 Below are sample codes.
 
-Replicate Weighting examples are available for:  
-  Stata, R, SAS, SUDAAN. 
+* Replicate Weighting examples are available for:  
+  - Stata, R, SAS, SUDAAN. 
 
-Taylor Series examples are available for:  
-  Stata, R, SAS, SUDAAN, SPSS.
+* Taylor Series examples are available for:  
+  - Stata, R, SAS, SUDAAN, SPSS.
 
+* Pooling examples are available for:  
+  - Stata, SAS, (R package in progress).
 
 
 ## Replicate Weights
+
+This document contains information on using replicate weights to accurately calculate variance with the California Health Interview Survey (CHIS) data and also contains sample codes for generating means, frequencies, and for performing linear regressions and logistic regressions. 
+
+In order to accurately estimate variance without jeopardizing data confidentiality and respondent privacy, CHIS Public Use Files (PUFs) provide 80 replicate weights (rakedw1-rakedw80) in addition to the final weight (rakedw0). In this document, the term “replicate weights” refers to the delete‐1 jackknife method The final weight (rakedw0) accounts for the sample selection probabilities and statistical adjustments for potential undercoverage and nonresponse biases. In addition, when this weight is applied, it ensures that estimates from the CHIS sample are an unbiased representation of the California population. The replicate weights (rakedw1-rakedw80) are specially designed for valid variance estimation in the absence of the sample design information, which have been excluded from the CHIS PUFs. These 80 different weights provide variance estimates computed with 80 replications.  
+     
+Confidential CHIS data may utilize either replicate weights or the Taylor series linearization method. PUF data may only utilize replicate weights.
+
+In comparison with the Taylor series linearization method, replicate weights require no specification of the sampling design and are accurate with subset analyses (in SAS, where and by statements are safe to use with replicate weights), but replicate weights may require much more computing time compared to using the Taylor series linearization method.
+
+When analyzing data from the CHIS PUFs, using replicate weights in conjunction with the final weight will produce unbiased estimates and variance estimations. If the final weight is applied without the replicate weights, unbiased estimates will be produced, but their variability will be underestimated due to the incorrect assumption that the sample is a simple random sample. 
+
+Examples in this document illustrate how CHIS PUFs can be analyzed with replicate weights to produce valid variance estimates using statistical software packages.
+
+For continuous variables, sample calculations of means and linear regression analysis are presented; for categorical variables, sample calculations of frequencies and logistic regression analysis are presented. Estimates and standard errors are identical across the software packages examined, but confidence intervals may differ because of different default methods of computation (for SAS, the default is Wald confidence intervals; for SUDAAN and Stata, it is logit confidence intervals).
+
+
 
 ### Stata
 
@@ -445,12 +466,17 @@ MODEL ast = racehpr2 srsex srage_p; RUN;
 
 ## Taylor Series
 
-Sample Codes for Variance Estimation Using the Taylor Series Linearization Method 
-
 This document contains information on using the Taylor series linearization method to accurately calculate variance with the California Health Interview Survey (CHIS) data and also contains sample codes for generating means, frequencies, and for performing linear regressions and logistic regressions. 
 
+The required variables for the Taylor series linearization method (tsvarstr and tsvrunit) have not been included in the CHIS Public Use Files. 
+     
+In comparison with replicate weights, the Taylor series linearization method requires much less computing time, but requires more attention on specifying the sampling design and on appropriate handling of subpopulation analyses. The variable that accounts for sample stratification is tsvarstr. When any of the adult, adolescent, or child data files are concatenated, each household becomes like a cluster; therefore, the clustering unit variable tsvrunit should be included, but should not be included if the data files are analyzed independently of each other. If the data needs to be subset, it should be done prior to the analysis in a separate step, with the remainder of the population set to missing. 
 
+The final weight (rakedw0) accounts for the sample selection probabilities and statistical adjustments for potential undercoverage and nonresponse biases. In addition, when this weight is applied, it ensures that estimates from the CHIS sample are an unbiased representation of the California population. Using only rakedw0 without sample design information in analyzing CHIS data will produce unbiased estimates, but would underestimate the variability due to the incorrect assumption that the sample was drawn with simple random sampling.  
 
+Examples in this document illustrate how CHIS data can be analyzed with Taylor series linearization to produce valid variance estimates using statistical software packages.
+
+For continuous variables, sample calculations of means and linear regression analysis are presented; for categorical variables, sample calculations of frequencies and logistic regression analysis are presented. Estimates and standard errors are identical across the software packages examined, but confidence intervals may differ because of different default methods of computation (for SAS, the default is Wald confidence intervals; for SUDAAN and Stata, it is logit confidence intervals).
 
 
 
@@ -1078,4 +1104,128 @@ When using concatenated data across adults, adolescents, and/or children, use ts
 
 SPSS CSLOGISTIC automatically chooses the highest value of the categorical variable as the reference group for the independent variables as well as the dependent variable. Therefore, recoding categorical variables is necessary to select the desired reference categories if they are different than the categories with highest values.
 
+
+
+## Sample Code to Pool Multiple Data Cycles
+
+For background on pooling two or more data files, see the page on Pooling.
+
+The following Stata and SAS/SUDAAN codes show how to combine CHIS 2017 and 2018 data files and to create weights accounting for the multi-year files. In addition to the sample code, we also provide a SAS macro for the user interested in analyzing CHIS data in SAS. This SAS macro will do all the work of weight adjustments automatically, and also generate other necessary information needed in later analysis. You can download this in the section CHIS Pooling Macro.
+
+
+### Stata
+
+
+```default
+log using "folder location\data_step.log", replace
+
+***CHIS 2017 Adult data****
+use "your folder location\CHIS 2017 data"
+
+gen year=2017
+
+gen fnwgt0=rakedw0/2
+
+for new fnwgt1-fnwgt160: gen X=0
+
+foreach i of numlist 1/80{
+            local j=`i'-0
+            replace fnwgt`i'=rakedw`j'/2
+
+}
+
+foreach i of numlist 81/160{
+            replace fnwgt`i'=rakedw0/2
+
+}
+
+save adult17 , replace
+
+***CHIS 2018 Adult data****
+use "folder location\CHIS 2018 data"
+
+gen year=2018
+
+gen fnwgt0=rakedw0/2
+
+for new fnwgt1-fnwgt160: gen X=0
+
+foreach i of numlist 1/80{           
+            replace fnwgt`i'=rakedw0/2
+
+}
+
+foreach i of numlist 81/160{
+            local j=`i'-80
+            replace fnwgt`i'=rakedw`j'/2
+}
+
+/*this step concatenates the data files*/
+append using adult17 
+
+save "folder location\combined.dta", replace
+
+svyset [pw=fnwgt0], jkrw(fnwgt1-fnwgt160, multiplier(1)) vce(jack) mse
+
+```
+
+The above Stata code illustrate how to extract stored estimates from Stata commands and perform data operations based on the saved data. For Stata, returned Stata results are saved to Stata scalars and can be accessed later. For generating results from both years, users may choose to either use DISPLAY command to outputs these scalars in results window or use PUTEXCEL to save the results to an Excel file.
+
+### SAS / SUDAAN
+
+
+```default
+
+data combined; /*this step concatenates the data files*/
+	set libname.chis_2017 (in=in17) libname.chis_2018 (in=in18);
+	
+	if in17 then year=2017;
+	else if in18 then year=2018;
+	
+	***Create new weight variables;
+	fnwgt0 = rakedw0/2;
+	array a_origwgts[80] rakedw1-rakedw80;
+	array a_newwgts[160] fnwgt1-fnwgt160;
+	do i = 1 to 80;
+		if year=2017 then do;
+			a_newwgts[i] = a_origwgts[i]/2;
+			a_newwgts[i+80] = rakedw0/2;
+		end;
+		else if year=2018 then do;
+			a_newwgts[i]    = rakedw0/2;
+			a_newwgts[i+80] = a_origwgts[i]/2;
+		end;
+
+	end;
+run;
+
+proc surveyfreq data = combined varmethod=jackknife;
+	weight fnwgt0;
+	repweight fnwgt1-fnwgt160/jkcoefs=1;
+	table ins;
+run;
+
+```
+
+Jackknife coefficients are necessary for accurate variance calculations, and jackknife coefficients of 1 in SAS will produce equal variance calculations as those produced in SUDAAN. However, for SAS V.9.2(TS1M0) and earlier, a value of 1 will not be accepted; as a substitute, 0.9999 can be entered. Without this specification, the default value of the jackknife coefficients will be [(# replicate weights - 1)/# replicate weights]; for CHIS, this would be [(80 - 1)/80] = 0.9875.
+
+
+
+The above SAS code illustrates how to extract stored estimates from SAS procedures and perform data operations based on the saved data.
+
+For SAS, ODS OUTPUT statement saves the outputs from SAS procedures to a working dataset. ODS OUTPUT ONEWAY is used for one-way table, and ODS OUTPUT CROSSTABS is used for two-way crosstabs.
+
+In this example, results are saved in the EST_COMBINED data, users may choose to use PROC PRINT to display the results in ODS window, or use PROC EXPORT to output them to an Excel file.
+
+
+### CHIS Pooling Macro
+
+In addition to the sample code above, we also provide a SAS macro for the user interested in analyzing CHIS data in SAS. This SAS macro will do all the work of weight adjustments automatically, and also generate other necessary information needed in later analysis. You can download this macro here: CHIS Pooling Macro
+
+
+https://legacy.healthpolicy.ucla.edu/chis/analyze/Documents/CHIS%20POOLING%20MACRO.zip
+
+### Video Tutorial
+
+https://www.youtube.com/watch?v=_aQtdQWmGSc
 
