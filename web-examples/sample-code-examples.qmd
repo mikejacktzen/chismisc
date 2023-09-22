@@ -91,6 +91,7 @@ svyset [pw=rakedw0], jkrw(rakedw1-rakedw80, multiplier(1)) vce(jack) mse
 svy: tabulate astcur racehpr2, col se ci  
 svy, subpop (if srsex==1): tab astcur racehpr2, col se ci 
 svy, subpop (if srsex==2): tab astcur racehpr2, col se ci 
+svy: tabulate astcur racehpr2, count format(%11.0fc)
 
 ```
 In Stata, the sample design specification step should be included before conducting any analysis.
