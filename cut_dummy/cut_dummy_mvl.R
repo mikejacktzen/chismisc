@@ -1,5 +1,5 @@
 
-# developed for 1-yr cycle dummy data files
+# developed for 1-yr cycle dummy data of formatted stata .dta files
 
 library(tidyverse)
 library(purrr)
@@ -97,8 +97,8 @@ keep_approved_vars = function(filepath_mvl,
 
 # pipe together statements ------------------------------------------------
 
-# unzipped files in 'filepath_dummyfiles_unzipped'
-# get opened and cut according to your 'filepath_mvl'
+# unzipped stata files in 'filepath_dummyfiles_unzipped'
+# read files and cut according to your 'filepath_mvl'
 # saved in 'filepath_save'
 
 filepath_dummyfiles_unzipped %>% 
