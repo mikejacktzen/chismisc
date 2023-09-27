@@ -91,6 +91,7 @@ svyset [pw=rakedw0], jkrw(rakedw1-rakedw80, multiplier(1)) vce(jack) mse
 svy: tabulate astcur racehpr2, col se ci  
 svy, subpop (if srsex==1): tab astcur racehpr2, col se ci 
 svy, subpop (if srsex==2): tab astcur racehpr2, col se ci 
+svy: tabulate astcur racehpr2, count format(%11.0fc)
 
 ```
 In Stata, the sample design specification step should be included before conducting any analysis.
@@ -127,7 +128,7 @@ use "DATASET LOCATION”
 svyset [pw=rakedw0], jkrw(rakedw1-rakedw80, multiplier(1)) vce(jack) mse 
  
 *Analysis*  
-recode astcur (2=0) (1=1) (-9=.), gen (ast) 
+recode astcur (2=0) (1=1) (-9=.) (-1=.), gen (ast) 
   
 xi: svy: logit ast srage_p i.race i.srsex 
 
@@ -520,6 +521,7 @@ svyset TSVRUNIT [pw=rakedw0], strata (TSVARSTR)
 svy: tabulate astcur racehpr2, col se ci  
 svy, subpop (if srsex==1): tab astcur racehpr2, col se ci 
 svy, subpop (if srsex==2): tab astcur racehpr2, col se ci 
+svy: tabulate astcur racehpr2, count format(%11.0fc)
 
 ```
 
@@ -561,7 +563,7 @@ use "DATASET LOCATION”
 svyset TSVRUNIT [pw=rakedw0], strata (TSVARSTR)
  
 *Analysis*  
-recode astcur (2=0) (1=1) (-9=.), gen (ast) 
+recode astcur (2=0) (1=1) (-9=.) (-1=.), gen (ast) 
   
 xi: svy: logit ast srage i.race i.srsex 
 
