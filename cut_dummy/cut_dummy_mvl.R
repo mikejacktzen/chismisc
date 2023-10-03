@@ -86,7 +86,7 @@ keep_approved_vars = function(filepath_mvl,
 
   # names(df_dta)
   
-  df_dta_cut = df_dta %>% select(contains(df_app[["VARIABLE NAME"]]))
+  df_dta_cut = df_dta %>% select((df_app[["VARIABLE NAME"]]))
   # data will not have our explicitly created FILENAME,YEAR_FILE,ATC_FILE
   
   haven::write_dta(df_dta_cut,paste0(filepath_save,sheet,"_",year_file,".dta"))
