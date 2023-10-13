@@ -1,18 +1,26 @@
-
-# developed for 1-yr cycle dummy data files
+# developed for 1-yr cycle dummy data of formatted stata .dta and sas sas7bdat files
+# RENAME STATA AND SAS FILES TO INCLUDE THE CAPITLIZED AGE GROUP (EITHER "ADULT" OR "TEEN" OR "CHILD") 
+# AND THE YEAR OF THE DATA IN 20## FORMAT
+# Ex: ADULT_2021
 
 library(tidyverse)
 library(purrr)
 
-filepath_dummyfiles_unzipped = "..\\data-chis-dummy\\unzipped\\"
+# enter folder location of all downloaded Stata and SAS dummy files
+filepath_dummyfiles_unzipped = "..\\data-chis-dummy\\unzippeddatafiles\\"
 
-filepath_mvl="..\\MasterVariableList.xlsx"
+# enter location and name of master variable list excel sheet updated with desired variables
+filepath_mvl = "..\\MasterVariableList.xlsx"
 
-filepath_save = "..\\data-chis-dummy\\mvl-approved\\"
+# enter output data folder location
+filepath_save = "..\\data-chis-dummy\\output\\"
+
+# enter either ".dta" for Stata or ".sas7bdat" for SAS for the format of downloaded dummy files
+mydatatype = ".dta"
 
 
 
-read_dta_add_filename <- function(filename){
+read_dta_add_filename <- function(filename, datatype=".dta"){
   require(dplyr)
   require(stringr)
   require(haven)
@@ -29,7 +37,17 @@ read_dta_add_filename <- function(filename){
   
   year_file_0 = as.character(str_match(filename,'[0-9]{2,}'))
   
-  dat = haven::read_dta(filename)
+  if(datatype==".dta") {
+    
+    dat = haven::read_dta(filename)
+    
+  }
+  
+  if(datatype==".sas7bdat") {
+    
+    dat = haven::read_sas(filename)
+    
+  }
   
   dat2 = dat %>% 
     mutate(filename = filename) %>% 
@@ -44,6 +62,7 @@ read_dta_add_filename <- function(filename){
   # dat2 %>% select(FILENAME,YEAR_FILE,ATC_FILE)
   
   return(dat2)
+  
 }
 
 
@@ -51,10 +70,10 @@ read_dta_add_filename <- function(filename){
 # throw out not (yet) approved variables of your MVL
 # keep the X approved variables only
 
-
 keep_approved_vars = function(filepath_mvl,
                               df_dta,
                               toupper=TRUE,
+                              datatype=".dta",
                               filepath_save){
   
   require(dplyr)
@@ -83,13 +102,22 @@ keep_approved_vars = function(filepath_mvl,
                   .fns = ~ grepl(x=.x,
                                  pattern="^[xX]$")))
   
-
   # names(df_dta)
   
-  df_dta_cut = df_dta %>% select(contains(df_app[["VARIABLE NAME"]]))
+  df_dta_cut = df_dta %>% select((df_app[["VARIABLE NAME"]]))
   # data will not have our explicitly created FILENAME,YEAR_FILE,ATC_FILE
   
-  haven::write_dta(df_dta_cut,paste0(filepath_save,sheet,"_",year_file,".dta"))
+  if(datatype == ".dta") {
+    
+    haven::write_dta(df_dta_cut,paste0(filepath_save,sheet,"_",year_file,".dta"))
+    
+  }
+  
+  if(datatype == ".sas7bdat") {
+    
+    haven::write_sas(df_dta_cut,paste0(filepath_save,sheet,"_",year_file,".sas7bdat"))
+    
+  }
   
 }
 
@@ -97,21 +125,21 @@ keep_approved_vars = function(filepath_mvl,
 
 # pipe together statements ------------------------------------------------
 
-# unzipped files in 'filepath_dummyfiles_unzipped'
-# get opened and cut according to your 'filepath_mvl'
+# unzipped stata and sas files in 'filepath_dummyfiles_unzipped'
+# read files and cut according to your 'filepath_mvl'
 # saved in 'filepath_save'
 
 filepath_dummyfiles_unzipped %>% 
   
   list.files(path = .,full.names = T,recursive = TRUE) %>% 
-  purrr::keep(str_detect(string=.,pattern="format")) %>% 
+  purrr::keep(str_detect(string=.,pattern=mydatatype)) %>% 
   
-  purrr::map(read_dta_add_filename) %>% 
+  purrr::map(read_dta_add_filename,
+             datatype = mydatatype) %>% 
   
   purrr::walk(keep_approved_vars,
-              filepath_mvl=filepath_mvl,
-              filepath_save=filepath_save)
+              filepath_mvl = filepath_mvl,
+              filepath_save = filepath_save,
+              datatype = mydatatype)
 
 message(filepath_save)
-
-
