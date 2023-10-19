@@ -1,4 +1,4 @@
-# developed for 1-yr cycle dummy data of formatted stata .dta and sas sas7bdat files
+# developed for 1-yr cycle dummy data of formatted stata .dta and sas .sas7bdat files
 # RENAME STATA AND SAS FILES TO INCLUDE THE CAPITLIZED AGE GROUP (EITHER "ADULT" OR "TEEN" OR "CHILD") 
 # AND THE YEAR OF THE DATA IN 20## FORMAT
 # Ex: ADULT_2021
@@ -126,6 +126,7 @@ keep_approved_vars = function(filepath_mvl,
 # pipe together statements ------------------------------------------------
 
 # unzipped stata and sas files in 'filepath_dummyfiles_unzipped'
+
 # read files and cut according to your 'filepath_mvl'
 # saved in 'filepath_save'
 
